@@ -19,7 +19,7 @@ test("capture desktop and mobile", async ({ page }) => {
 
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await settle(page, 2800);
+  await settle(page, 3200);
   await page.screenshot({ path: `${outDir}/landing-desktop.png`, fullPage: true });
 
   await page.goto("/mission");
@@ -40,7 +40,7 @@ test("capture desktop and mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await settle(page, 2800);
+  await settle(page, 3200);
   await page.screenshot({ path: `${outDir}/landing-mobile.png`, fullPage: true });
 
   await page.getByRole("button", { name: "Toggle color theme" }).click();
