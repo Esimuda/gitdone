@@ -4,7 +4,7 @@ Small open-source and Web3 communities ship from a laptop, late, with no DevOps 
 
 GitDone is the public face of a single [GitLab Duo Agent Platform](https://docs.gitlab.com/user/duo_agent_platform/) flow. A person opens one issue labelled `ship`. The flow carries it through all nine DevSecOps stages, deploys it, publishes a GitLab Release, and drafts the community post. The hub shows the changelog, the posts, and the journey.
 
-The name lives in one place: `PRODUCT_NAME` in [`src/config/brand.ts`](src/config/brand.ts). The mark is [`src/components/logo.tsx`](src/components/logo.tsx), mirrored for the browser tab by [`app/icon.svg`](src/app/icon.svg). Replace those when a final logo arrives.
+The name lives in one place: `PRODUCT_NAME` in [`src/config/brand.ts`](src/config/brand.ts). The mark — a branch with two commits that becomes a check — is defined in [`src/brand/mark.ts`](src/brand/mark.ts) and drawn in [`src/components/logo.tsx`](src/components/logo.tsx). Favicon, Apple touch icon, and Open Graph image are regenerated from that file with `node --experimental-strip-types scripts/render-brand.ts`.
 
 This repository was created for the GitLab Transcend “Life After Code” hackathon (Path A, hands-off). It is meant to be pushed to a public GitLab project under the MIT license. The pipeline and the Duo flow have not been executed yet. GitLab access for the hackathon was not available while this was written.
 

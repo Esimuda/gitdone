@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Wordmark } from "@/components/logo";
 import { PRODUCT_NAME } from "@/config/brand";
 import { STAGE_IDS } from "@/lib/data/types";
 import { STAGE_LABEL } from "@/lib/data/stages";
@@ -8,7 +9,7 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-border">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
-          <p className="text-sm font-medium">{PRODUCT_NAME}</p>
+          <Wordmark className="text-sm" />
           <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
             A release hub and mission control for communities that ship from one GitLab issue, on the Duo Agent Platform.
           </p>

@@ -4,8 +4,7 @@ import { Menu, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { PRODUCT_NAME } from "@/config/brand";
-import { Logo } from "@/components/logo";
+import { LogoMark, Wordmark } from "@/components/logo";
 import { openCommandPalette } from "@/components/command-palette";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -22,8 +21,8 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5 rounded-md" onClick={() => setOpen(false)}>
-          <Logo className="size-8" />
-          <span className="text-sm font-medium tracking-tight">{PRODUCT_NAME}</span>
+          <LogoMark className="size-8" />
+          <Wordmark className="text-base" />
         </Link>
         <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
           {LINKS.map((link) => {

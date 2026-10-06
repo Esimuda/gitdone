@@ -27,6 +27,16 @@ export const metadata: Metadata = {
     template: `%s · ${PRODUCT_NAME}`,
   },
   description: PRODUCT_DESCRIPTION,
+  openGraph: {
+    title: `${PRODUCT_NAME} · ${PRODUCT_TAGLINE}`,
+    description: PRODUCT_DESCRIPTION,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${PRODUCT_NAME} · ${PRODUCT_TAGLINE}`,
+    description: PRODUCT_DESCRIPTION,
+  },
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {

@@ -1,6 +1,7 @@
 /**
  * Product name. Every visible use reads from here.
- * The mark lives in src/components/logo.tsx (favicon mirror: app/icon.svg).
+ * The mark geometry lives in src/brand/mark.ts and is drawn in src/components/logo.tsx.
+ * app/icon.svg, apple-icon.png, and opengraph-image.png are generated from it.
  */
 export const PRODUCT_NAME = "GitDone";
 

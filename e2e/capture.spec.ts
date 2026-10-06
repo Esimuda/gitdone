@@ -7,11 +7,11 @@ test.beforeAll(async () => {
   await mkdir(outDir, { recursive: true });
 });
 
-async function settle(page: import("@playwright/test").Page) {
+async function settle(page: import("@playwright/test").Page, ms = 400) {
   await page.evaluate(async () => {
     await document.fonts.ready;
   });
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(ms);
 }
 
 test("capture desktop and mobile", async ({ page }) => {
@@ -19,7 +19,7 @@ test("capture desktop and mobile", async ({ page }) => {
 
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await settle(page);
+  await settle(page, 1500);
   await page.screenshot({ path: `${outDir}/landing-desktop.png`, fullPage: true });
 
   await page.goto("/mission");
@@ -40,7 +40,7 @@ test("capture desktop and mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await settle(page);
+  await settle(page, 1500);
   await page.screenshot({ path: `${outDir}/landing-mobile.png`, fullPage: true });
 
   await page.getByRole("button", { name: "Toggle color theme" }).click();

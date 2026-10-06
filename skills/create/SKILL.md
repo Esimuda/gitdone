@@ -9,7 +9,7 @@ Implement the acceptance checks from the latest journey note on the issue. Stay 
 
 ## Repository
 
-GitDone is a Next.js App Router app in TypeScript. The product name is the `PRODUCT_NAME` constant in `src/config/brand.ts`. The logo is only drawn in `src/components/logo.tsx` (favicon mirror: `app/icon.svg`). Run `npm test`, `npm run lint`, and `npm run typecheck` before you open the merge request.
+GitDone is a Next.js App Router app in TypeScript. The product name is the `PRODUCT_NAME` constant in `src/config/brand.ts`. The logo geometry is only in `src/brand/mark.ts` and is drawn only in `src/components/logo.tsx` (favicon: `app/icon.svg`). Run `npm test`, `npm run lint`, and `npm run typecheck` before you open the merge request.
 
 ## Git
 

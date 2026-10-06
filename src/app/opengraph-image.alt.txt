@@ -1,0 +1,1 @@
+GitDone logo: a git branch with two commits that bends into a checkmark, beside the GitDone wordmark.

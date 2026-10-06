@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LogoMark } from "@/components/logo";
 import { StageRail } from "@/components/stage-rail";
 import { PRODUCT_NAME } from "@/config/brand";
 import { getAppData } from "@/lib/data";
@@ -19,7 +20,8 @@ export default async function HomePage() {
     <div>
       <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
         <div>
-          <p className="text-xs tracking-[0.18em] text-primary uppercase">Hands-off DevSecOps</p>
+          <LogoMark draw className="size-16 sm:size-20" />
+          <p className="mt-6 text-xs tracking-[0.18em] text-primary uppercase">Hands-off DevSecOps</p>
           <h1 className="mt-4 max-w-xl text-4xl font-medium tracking-tight text-balance sm:text-6xl sm:leading-[1.05]">
             Open an issue. Come back to a release.
           </h1>
