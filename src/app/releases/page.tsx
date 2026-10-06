@@ -19,7 +19,7 @@ export default async function ReleasesPage() {
   if (data.source === "error") return null;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs tracking-[0.18em] text-primary uppercase">{data.project.name}</p>
@@ -41,7 +41,10 @@ export default async function ReleasesPage() {
       ) : (
         <ol className="mt-10 space-y-8">
           {data.releases.map((release) => (
-            <li key={release.tag} className="rounded-3xl border border-border bg-card p-5 sm:p-6">
+            <li
+              key={release.tag}
+              className="rounded-[1.75rem] border border-border bg-card p-5 shadow-[0_30px_80px_-48px_rgba(252,109,38,0.55)] sm:p-7"
+            >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="text-2xl font-medium tracking-tight">
                   <Link href={`/releases/${encodeURIComponent(release.tag)}`} className="hover:text-primary">

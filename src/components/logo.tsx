@@ -38,6 +38,12 @@ export function LogoMark({ className, draw = false }: { className?: string; draw
             <stop key={stop.offset} offset={stop.offset} stopColor={stop.color} />
           ))}
         </linearGradient>
+        <mask id={`${gradientId}-cut`}>
+          <rect width={MARK_VIEWBOX} height={MARK_VIEWBOX} fill="white" />
+          {MARK_NODES.map((node) => (
+            <circle key={`${node.cx}-cut`} cx={node.cx} cy={node.cy} r={MARK_NODE_RADIUS - 0.35} fill="black" />
+          ))}
+        </mask>
       </defs>
       <path
         d={MARK_PATH}
@@ -46,6 +52,7 @@ export function LogoMark({ className, draw = false }: { className?: string; draw
         strokeWidth={MARK_STROKE}
         strokeLinecap="round"
         strokeLinejoin="round"
+        mask={`url(#${gradientId}-cut)`}
         pathLength={draw ? 1 : undefined}
         className={draw ? "logo-draw" : undefined}
       />

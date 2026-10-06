@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { MissionViz } from "@/components/mission-viz";
 import { StageRail } from "@/components/stage-rail";
 import { getAppData } from "@/lib/data";
-import { formatDuration, touchLabel } from "@/lib/format";
+import { formatDuration, formatTimestamp, touchLabel } from "@/lib/format";
 import { currentStage, isInFlight, isShipped, leadTimeMinutes, spotlightJourney } from "@/lib/data/metrics";
-import { STAGE_LABEL } from "@/lib/data/stages";
+import { STAGE_LABEL, stageById } from "@/lib/data/stages";
 import { STAGE_IDS, type StageRecord } from "@/lib/data/types";
 
 export const metadata: Metadata = { title: "Mission control" };
@@ -13,9 +14,31 @@ export default async function MissionPage() {
   const data = await getAppData();
   if (data.source === "error") return null;
   const { overview, tallies } = data;
-  const maxPassed = Math.max(1, ...tallies.map((tally) => tally.passed));
   const spotlight = spotlightJourney(data.journeys);
   const spotlightLive = spotlight ? isInFlight(spotlight) : false;
+  const leads = data.journeys
+    .map((journey) => {
+      const minutes = leadTimeMinutes(journey);
+      const completed = stageById(journey.stages, "configure")?.completedAt ?? journey.createdAt;
+      return minutes === null ? null : { label: journey.releaseTag ?? `#${journey.issueIid}`, minutes, completed };
+    })
+    .filter((point): point is { label: string; minutes: number; completed: string } => point !== null)
+    .sort((a, b) => a.completed.localeCompare(b.completed));
+  const feed = data.journeys
+    .flatMap((journey) =>
+      journey.stages
+        .filter((stage) => stage.completedAt && stage.summary)
+        .map((stage) => ({
+          at: formatTimestamp(stage.completedAt ?? ""),
+          iso: stage.completedAt ?? "",
+          iid: journey.issueIid,
+          title: journey.title,
+          stage: STAGE_LABEL[stage.stage],
+          summary: stage.summary,
+        })),
+    )
+    .sort((a, b) => b.iso.localeCompare(a.iso))
+    .slice(0, 6);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -49,6 +72,14 @@ export default async function MissionPage() {
         />
       </dl>
 
+      <MissionViz
+        leads={leads}
+        heat={tallies.map((tally) => ({ stage: tally.stage, passed: tally.passed, running: tally.running }))}
+        zeroTouch={overview.zeroTouchShips}
+        touched={Math.max(0, overview.shipsWithTouchData - overview.zeroTouchShips)}
+        feed={feed}
+      />
+
       {spotlight ? (
         <section className="mt-10 rounded-3xl border border-border bg-card p-5 shadow-[0_30px_80px_-48px_rgba(252,109,38,0.65)] sm:p-6">
           <div className="mb-6 flex items-start justify-between gap-3">
@@ -65,26 +96,6 @@ export default async function MissionPage() {
           <StageRail stages={spotlight.stages} />
         </section>
       ) : null}
-
-      <section className="mt-10 rounded-3xl border border-border bg-card p-5 sm:p-6" aria-label="Stage coverage">
-        <h2 className="text-sm font-medium">Where work has passed</h2>
-        <ul className="mt-4 space-y-3">
-          {tallies.map((tally) => (
-            <li key={tally.stage} className="grid grid-cols-[6.5rem_1fr_auto] items-center gap-3 text-sm">
-              <span>{STAGE_LABEL[tally.stage]}</span>
-              <span className="h-1.5 overflow-hidden rounded-full bg-muted">
-                <span
-                  className="block h-full rounded-full bg-primary"
-                  style={{ width: `${(tally.passed / maxPassed) * 100}%` }}
-                />
-              </span>
-              <span className="num text-xs text-muted-foreground">
-                {tally.passed} passed{tally.running ? ` · ${tally.running} live` : ""}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
 
       <section className="mt-10">
         <h2 className="text-sm font-medium">Issues</h2>

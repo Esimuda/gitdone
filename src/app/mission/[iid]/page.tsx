@@ -1,8 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { JourneyTimeline } from "@/components/journey-timeline";
-import { StageRail } from "@/components/stage-rail";
+import { JourneyConsole } from "@/components/journey-console";
 import { getAppData } from "@/lib/data";
 import { formatDuration, formatTimestamp, touchLabel } from "@/lib/format";
 import { leadTimeMinutes } from "@/lib/data/metrics";
@@ -32,7 +31,7 @@ export default async function JourneyPage({ params }: { params: Promise<Params> 
         : "Seeded demo record";
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       <Link href="/mission" className="text-sm text-muted-foreground hover:text-foreground">
         Mission control
       </Link>
@@ -45,9 +44,6 @@ export default async function JourneyPage({ params }: { params: Promise<Params> 
         <Stat label="Release" value={journey.releaseTag ?? "—"} />
         <Stat label="Opened" value={formatTimestamp(journey.createdAt).replace(" UTC", "")} />
       </dl>
-      <section className="mt-8 rounded-3xl border border-border bg-card p-4 sm:p-6">
-        <StageRail stages={journey.stages} />
-      </section>
       <p className="mt-4 text-xs text-muted-foreground">
         {provenance}
         {journey.author ? ` · opened by ${journey.author}` : ""}
@@ -68,9 +64,7 @@ export default async function JourneyPage({ params }: { params: Promise<Params> 
           {data.source === "demo" ? <span className="text-muted-foreground"> · demo URL</span> : null}
         </p>
       ) : null}
-      <div className="mt-10">
-        <JourneyTimeline stages={journey.stages} />
-      </div>
+      <JourneyConsole stages={journey.stages} />
     </div>
   );
 }

@@ -38,8 +38,12 @@ function svgMarkup(size: number) {
     <linearGradient id="g" x1="${MARK_GRADIENT.x1}" y1="${MARK_GRADIENT.y1}" x2="${MARK_GRADIENT.x2}" y2="${MARK_GRADIENT.y2}" gradientUnits="userSpaceOnUse">
       ${stops}
     </linearGradient>
+    <mask id="cut">
+      <rect width="${MARK_VIEWBOX}" height="${MARK_VIEWBOX}" fill="white"/>
+      ${MARK_NODES.map((node) => `<circle cx="${node.cx}" cy="${node.cy}" r="${MARK_NODE_RADIUS - 0.35}" fill="black"/>`).join("")}
+    </mask>
   </defs>
-  <path d="${MARK_PATH}" stroke="url(#g)" stroke-width="${MARK_STROKE}" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${MARK_PATH}" stroke="url(#g)" stroke-width="${MARK_STROKE}" stroke-linecap="round" stroke-linejoin="round" mask="url(#cut)"/>
   ${nodes}
 </svg>`;
 }
@@ -51,7 +55,11 @@ function iconSvg() {
       ${MARK_GRADIENT.stops.map((stop) => `<stop offset="${stop.offset}" stop-color="${stop.color}"/>`).join("\n      ")}
     </linearGradient>
   </defs>
-  <path d="${MARK_PATH}" stroke="url(#g)" stroke-width="${MARK_STROKE}" stroke-linecap="round" stroke-linejoin="round"/>
+  <mask id="cut">
+    <rect width="${MARK_VIEWBOX}" height="${MARK_VIEWBOX}" fill="white"/>
+    ${MARK_NODES.map((node) => `<circle cx="${node.cx}" cy="${node.cy}" r="${MARK_NODE_RADIUS - 0.35}" fill="black"/>`).join("\n    ")}
+  </mask>
+  <path d="${MARK_PATH}" stroke="url(#g)" stroke-width="${MARK_STROKE}" stroke-linecap="round" stroke-linejoin="round" mask="url(#cut)"/>
   ${MARK_NODES.map((node) => `<circle cx="${node.cx}" cy="${node.cy}" r="${MARK_NODE_RADIUS}" fill="url(#g)"/>`).join("\n  ")}
 </svg>
 `;
