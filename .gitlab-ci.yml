@@ -1,0 +1,164 @@
+# GitDone pipeline.
+# This file cannot run in the current environment. It is written from GitLab's
+# stable SAST and secret-detection templates, the release: keyword docs, and the
+# Google Cloud Run component tutorial (component pin @0.1.0).
+# The Cloud Run component project was archived when these docs were checked.
+# The pin matches the tutorial. Whether that tag still resolves is unverified.
+#
+# Placeholders — set these in Settings > CI/CD > Variables, or replace the
+# values below, before a deploy can succeed:
+#   GCP_PROJECT_ID          Google Cloud project id
+#   GCP_REGION              Cloud Run region, for example us-central1
+#   GCP_AR_LOCATION         Artifact Registry location, for example us-central1
+#   GCP_AR_REPOSITORY       Artifact Registry repository id
+#   CLOUD_RUN_SERVICE_STAGING
+#   CLOUD_RUN_SERVICE_PRODUCTION
+#   STAGING_SERVICE_URL     https URL of the staging Cloud Run service
+#   PRODUCTION_SERVICE_URL  https URL of the production Cloud Run service
+#
+# Authentication to Google is Workload Identity Federation, not a JSON key.
+# Configure it in the GitLab project (Settings > Integrations > Google Cloud)
+# so jobs receive short-lived credentials. The Cloud Run component expects that
+# integration. Grant the workload identity roles/run.admin and
+# roles/iam.serviceAccountUser, plus Artifact Registry writer for the copy.
+# Docs: https://docs.gitlab.com/ci/cloud_services/google_cloud/
+#       https://docs.gitlab.com/tutorials/create_and_deploy_web_service_with_google_cloud_run_component/
+
+stages:
+  - lint
+  - test
+  - package
+  - publish
+  - deploy-staging
+  - verify
+  - deploy-production
+  - release
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+variables:
+  IMAGE_TAG: $CI_COMMIT_SHA
+  GCP_PROJECT_ID: "REPLACE_WITH_GCP_PROJECT_ID"
+  GCP_REGION: "us-central1"
+  GCP_AR_LOCATION: "us-central1"
+  GCP_AR_REPOSITORY: "REPLACE_WITH_AR_REPOSITORY"
+  CLOUD_RUN_SERVICE_STAGING: "REPLACE_WITH_STAGING_SERVICE"
+  CLOUD_RUN_SERVICE_PRODUCTION: "REPLACE_WITH_PRODUCTION_SERVICE"
+  AR_IMAGE: "$GCP_AR_LOCATION-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_AR_REPOSITORY/gitdone"
+  DOCKER_TLS_CERTDIR: "/certs"
+
+.default-branch:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+.node:
+  image: node:22-bookworm
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+  before_script:
+    - npm ci
+
+lint:
+  extends: .node
+  stage: lint
+  script:
+    - npm run lint
+    - npm run typecheck
+
+unit:
+  extends: .node
+  stage: test
+  script:
+    - npm test
+
+# Image tag tracks @playwright/test. Bump both together.
+e2e:
+  stage: test
+  image: mcr.microsoft.com/playwright:v1.63.0-jammy
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+  script:
+    - npm ci
+    - npm run build
+    - npm run test:e2e
+
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+  - template: Jobs/Secret-Detection.gitlab-ci.yml
+  - component: gitlab.com/google-gitlab-components/artifact-registry/upload-artifact-registry@0.1.0
+    inputs:
+      stage: publish
+      source: $CI_REGISTRY_IMAGE:$IMAGE_TAG
+      target: $AR_IMAGE:$IMAGE_TAG
+  - component: gitlab.com/google-gitlab-components/cloud-run/deploy-cloud-run@0.1.0
+    inputs:
+      stage: deploy-staging
+      as: deploy-staging
+      image: $AR_IMAGE:$IMAGE_TAG
+      project_id: $GCP_PROJECT_ID
+      region: $GCP_REGION
+      service: $CLOUD_RUN_SERVICE_STAGING
+  - component: gitlab.com/google-gitlab-components/cloud-run/deploy-cloud-run@0.1.0
+    inputs:
+      stage: deploy-production
+      as: deploy-production
+      image: $AR_IMAGE:$IMAGE_TAG
+      project_id: $GCP_PROJECT_ID
+      region: $GCP_REGION
+      service: $CLOUD_RUN_SERVICE_PRODUCTION
+
+package:
+  extends: .default-branch
+  stage: package
+  image: docker:27
+  services:
+    - name: docker:27-dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  script:
+    - docker build -t "$CI_REGISTRY_IMAGE:$IMAGE_TAG" -t "$CI_REGISTRY_IMAGE:latest" .
+    - docker push "$CI_REGISTRY_IMAGE:$IMAGE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE:latest"
+
+# Post-deploy smoke. STAGING_SERVICE_URL is a placeholder variable.
+# The Cloud Run component does not document a stable URL output in the tutorial.
+smoke:staging:
+  extends: .default-branch
+  stage: verify
+  image: curlimages/curl:8.11.1
+  script:
+    - |
+      if [ -z "$STAGING_SERVICE_URL" ]; then
+        echo "Set STAGING_SERVICE_URL to the staging Cloud Run URL (https://...)."
+        exit 1
+      fi
+    - curl --fail --show-error --retry 8 --retry-delay 5 --retry-all-errors "$STAGING_SERVICE_URL/api/health"
+
+# Releases of this repository when a maintainer pushes a tag.
+# The Duo flow publishes product releases from issues. This job is separate.
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/cli:latest
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - echo "Publishing $CI_COMMIT_TAG"
+  release:
+    tag_name: $CI_COMMIT_TAG
+    name: "GitDone $CI_COMMIT_TAG"
+    description: "Release $CI_COMMIT_TAG of GitDone."
+    ref: $CI_COMMIT_SHA

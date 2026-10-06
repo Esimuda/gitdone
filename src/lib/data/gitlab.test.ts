@@ -1,0 +1,153 @@
+import { describe, expect, it } from "vitest";
+import { buildGitlabUrl, inferJourney, loadGitlabAppData, mapRelease, parseChangelog } from "./gitlab";
+import type { GitlabIssue, GitlabMergeRequest, GitlabPipeline, GitlabRelease } from "./gitlab";
+
+const issue: GitlabIssue = {
+  iid: 12,
+  title: "Ship the health check",
+  description: "Add GET /health.",
+  state: "opened",
+  labels: ["ship"],
+  web_url: "https://gitlab.com/acme/app/-/issues/12",
+  author: { username: "ada" },
+  created_at: "2026-10-01T10:00:00.000Z",
+};
+
+describe("gitlab urls", () => {
+  it("encodes a path project id once", () => {
+    expect(buildGitlabUrl("https://gitlab.com/", "acme/app", "/issues")).toBe(
+      "https://gitlab.com/api/v4/projects/acme%2Fapp/issues",
+    );
+    expect(buildGitlabUrl("https://gitlab.example.com", "42", "")).toBe(
+      "https://gitlab.example.com/api/v4/projects/42",
+    );
+  });
+});
+
+describe("changelog parsing", () => {
+  it("groups bullets under headings", () => {
+    const items = parseChangelog("## Added\n- Warn early\n## Security\n- Drop the key\n");
+    expect(items).toEqual([
+      { kind: "added", text: "Warn early" },
+      { kind: "security", text: "Drop the key" },
+    ]);
+  });
+});
+
+describe("inferJourney", () => {
+  const mr: GitlabMergeRequest = {
+    iid: 4,
+    title: "Health check",
+    description: "Closes #12",
+    state: "merged",
+    web_url: "https://gitlab.com/acme/app/-/merge_requests/4",
+    source_branch: "12-health",
+    created_at: "2026-10-01T10:10:00.000Z",
+    merged_at: "2026-10-01T10:40:00.000Z",
+  };
+  const pipeline: GitlabPipeline = {
+    id: 99,
+    status: "success",
+    ref: "12-health",
+    web_url: "https://gitlab.com/acme/app/-/pipelines/99",
+    created_at: "2026-10-01T10:12:00.000Z",
+    updated_at: "2026-10-01T10:20:00.000Z",
+  };
+  const release: GitlabRelease = {
+    tag_name: "v1.2.0",
+    name: "v1.2.0",
+    description: "## Added\n- Health check\n\nCloses #12",
+    released_at: "2026-10-01T11:00:00.000Z",
+    author: { name: "Duo" },
+    _links: { self: "https://gitlab.com/acme/app/-/releases/v1.2.0" },
+  };
+
+  it("infers stages and leaves human touches unknown", () => {
+    const journey = inferJourney({
+      issue,
+      mergeRequests: [mr],
+      releases: [release],
+      pipelines: [pipeline],
+      notes: [],
+    });
+    expect(journey.provenance).toBe("inferred");
+    expect(journey.humanTouches).toBeNull();
+    expect(journey.stages.find((stage) => stage.stage === "create")?.summary).toContain("!4");
+    expect(journey.stages.find((stage) => stage.stage === "verify")?.status).toBe("passed");
+    expect(journey.releaseTag).toBe("v1.2.0");
+  });
+
+  it("prefers a journey artifact over inference", () => {
+    const note = {
+      body: `<!-- journey:v1 ${JSON.stringify({
+        version: 1,
+        issueIid: 12,
+        humanTouches: 0,
+        touchNotes: [],
+        stages: [{ stage: "plan", status: "passed", summary: "From the flow" }],
+      })} -->`,
+    };
+    const journey = inferJourney({
+      issue,
+      mergeRequests: [mr],
+      releases: [],
+      pipelines: [],
+      notes: [note],
+    });
+    expect(journey.provenance).toBe("artifact");
+    expect(journey.humanTouches).toBe(0);
+    expect(journey.stages[0]?.summary).toBe("From the flow");
+  });
+
+  it("maps a release onto generated posts", () => {
+    const mapped = mapRelease({
+      release,
+      projectName: "app",
+      projectWebUrl: "https://gitlab.com/acme/app",
+      journeys: [],
+    });
+    expect(mapped.issueIid).toBe(12);
+    expect(mapped.announcements.x.length).toBeLessThanOrEqual(280);
+    expect(mapped.changelog[0]?.text).toBe("Health check");
+  });
+});
+
+describe("loadGitlabAppData", () => {
+  it("reads the REST resources and labels inferred data", async () => {
+    const fetchImpl: typeof fetch = async (input) => {
+      const url = String(input);
+      const json = (body: unknown, status = 200) =>
+        new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+      if (url.endsWith("/projects/7")) {
+        return json({
+          name: "app",
+          path_with_namespace: "acme/app",
+          description: "Demo",
+          web_url: "https://gitlab.com/acme/app",
+        });
+      }
+      if (url.includes("/issues?")) return json([issue]);
+      if (url.includes("/notes")) return json([]);
+      if (url.includes("/merge_requests")) return json([]);
+      if (url.includes("/releases")) return json([]);
+      if (url.includes("/pipelines")) return json([]);
+      return json({ message: "missing" }, 500);
+    };
+
+    const data = await loadGitlabAppData(
+      { token: "secret", projectId: "7", baseUrl: "https://gitlab.com" },
+      fetchImpl,
+    );
+    expect(data.source).toBe("gitlab");
+    expect(data.project.path).toBe("acme/app");
+    expect(data.journeys[0]?.provenance).toBe("inferred");
+    expect(data.warning).toMatch(/inferred/i);
+  });
+
+  it("turns a 401 into a safe error", async () => {
+    const fetchImpl: typeof fetch = async () => new Response("nope", { status: 401 });
+    await expect(
+      loadGitlabAppData({ token: "secret", projectId: "7", baseUrl: "https://gitlab.com" }, fetchImpl),
+    ).rejects.toThrow(/401/);
+  });
+});

@@ -1,0 +1,26 @@
+# How Duo flows execute in CI for this project.
+# Read from the default branch only.
+# Schema: https://docs.gitlab.com/user/duo_agent_platform/flows/execution/agent-config-yaml/
+# setup_script runs before the network policy is applied.
+# The execution docs also mention id_tokens. That key was not in the supported-keys
+# table captured for this draft, so it is omitted on purpose.
+
+image: node:22-bookworm
+
+setup_script:
+  - apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
+  - npm ci
+
+cache:
+  key:
+    files:
+      - package-lock.json
+    prefix: npm
+  paths:
+    - node_modules/
+
+network_policy:
+  include_recommended_allowed: true
+  allowed_domains:
+    - gitlab.com
+    - registry.gitlab.com

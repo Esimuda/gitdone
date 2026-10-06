@@ -1,0 +1,463 @@
+# Draft custom flow for GitLab Duo Agent Platform.
+# Paste this file into AI > Flows > New flow. Custom flows are stored in the
+# AI Catalog. A repository path is not loaded automatically.
+# Docs used: custom flow YAML schema, flow registry v1, triggers, agent skills, AGENTS.md.
+# Not executed here. Catalog limit is 40 KiB. Do not add top-level name,
+# description, or product_group. Do not set prompt model. environment must be ambient.
+#
+# Trigger, attached in the UI (AI > Flows > Enable, or AI > Triggers):
+#   Event: Work item. Action: Created.
+#   Optional second condition: Mention, so a person can re-run with a comment.
+#   A flow cannot start another flow. This file is the whole chain.
+#   Service account is created when the flow is enabled. Composite identity applies.
+#
+# Goal shapes that are documented: mention text with "Issue IID: N", assign passes
+# the IID alone, pipeline passes the webhook payload. Work item created goal shape
+# was not documented on the schema page. The plan skill handles that uncertainty.
+
+version: "v1"
+environment: ambient
+
+components:
+  - name: plan
+    type: AgentComponent
+    prompt_id: plan_prompt
+    inputs:
+      - from: context:goal
+        as: goal
+      - from: context:project_id
+        as: project_id
+      - from: context:inputs.agent_platform_standard_context.primary_branch
+        as: primary_branch
+      - from: context:inputs.user_rule
+        as: agents_dot_md
+        optional: true
+      - from: context:inputs.workspace_agent_skills
+        as: workspace_agent_skills
+        optional: true
+    toolset:
+      - get_issue
+      - get_work_item
+      - list_issues
+      - create_issue_note
+      - get_project
+      - gitlab_api_get
+      - read_file
+      - list_dir
+    ui_log_events:
+      - on_agent_final_answer
+      - on_tool_execution_success
+      - on_tool_execution_failed
+
+  - name: create
+    type: AgentComponent
+    prompt_id: create_prompt
+    inputs:
+      - from: context:goal
+        as: goal
+      - from: context:project_id
+        as: project_id
+      - from: context:inputs.agent_platform_standard_context.primary_branch
+        as: primary_branch
+      - from: context:inputs.user_rule
+        as: agents_dot_md
+        optional: true
+      - from: context:inputs.workspace_agent_skills
+        as: workspace_agent_skills
+        optional: true
+    toolset:
+      - read_file
+      - list_dir
+      - find_files
+      - grep
+      - edit_file
+      - create_file_with_contents
+      - create_branch
+      - create_commit
+      - create_merge_request
+      - get_issue
+      - create_issue_note
+      - gitlab_api_get
+      - run_command
+    ui_log_events:
+      - on_agent_final_answer
+      - on_tool_execution_success
+      - on_tool_execution_failed
+
+  - name: verify
+    type: AgentComponent
+    prompt_id: verify_prompt
+    inputs:
+      - from: context:goal
+        as: goal
+      - from: context:project_id
+        as: project_id
+      - from: context:inputs.user_rule
+        as: agents_dot_md
+        optional: true
+      - from: context:inputs.workspace_agent_skills
+        as: workspace_agent_skills
+        optional: true
+    toolset:
+      - read_file
+      - edit_file
+      - create_commit
+      - get_merge_request
+      - gitlab_api_get
+      - create_issue_note
+      - run_command
+    ui_log_events:
+      - on_agent_final_answer
+      - on_tool_execution_success
+      - on_tool_execution_failed
+
+  - name: package
+    type: AgentComponent
+    prompt_id: package_prompt
+    inputs:
+      - from: context:goal
+        as: goal
+      - from: context:project_id
+        as: project_id
+      - from: context:inputs.workspace_agent_skills
+        as: workspace_agent_skills
+        optional: true
+    toolset:
+      - gitlab_api_get
+      - get_merge_request
+      - create_issue_note
+      - read_file
+    ui_log_events:
+      - on_agent_final_answer
+      - on_tool_execution_success
+      - on_tool_execution_failed
+
+  - name: secure
+    type: AgentComponent
+    prompt_id: secure_prompt
+    inputs:
+      - from: context:goal
+        as: goal
+      - from: context:project_id
+        as: project_id
+      - from: context:inputs.workspace_agent_skills
+        as: workspace_agent_skills
+        optional: true
+    toolset:
+      - gitlab_api_get
+      - get_merge_request
+      - read_file
+      - edit_file
+      - create_commit
+      - create_issue_note
+      - run_command
+    ui_log_events:
+      - on_agent_final_answer
+      - on_tool_execution_success
+      - on_tool_execution_failed
+
+  - name: release
+    type: AgentComponent
+    prompt_id: release_prompt
+    inputs:
+      - from: context:goal
+        as: goal
+      - from: context:project_id
+        as: project_id
+      - from: context:inputs.agent_platform_standard_context.primary_branch
+        as: primary_branch
+      - from: context:inputs.workspace_agent_skills
+        as: workspace_agent_skills
+        optional: true
+    toolset:
+      - gitlab_api_get
+      - get_merge_request
+      - get_project
+      - create_issue_note
+      - read_file
+      - run_command
+    ui_log_events:
+      - on_agent_final_answer
+      - on_tool_execution_success
+      - on_tool_execution_failed
+
+  - name: configure
+    type: AgentComponent
+    prompt_id: configure_prompt
+    inputs:
+      - from: context:goal
+        as: goal
+      - from: context:project_id
+        as: project_id
+      - from: context:inputs.workspace_agent_skills
+        as: workspace_agent_skills
+        optional: true
+    toolset:
+      - gitlab_api_get
+      - create_issue_note
+      - read_file
+    ui_log_events:
+      - on_agent_final_answer
+      - on_tool_execution_success
+      - on_tool_execution_failed
+
+  - name: monitor
+    type: AgentComponent
+    prompt_id: monitor_prompt
+    inputs:
+      - from: context:goal
+        as: goal
+      - from: context:project_id
+        as: project_id
+      - from: context:inputs.workspace_agent_skills
+        as: workspace_agent_skills
+        optional: true
+    toolset:
+      - gitlab_api_get
+      - create_issue_note
+      - run_command
+    ui_log_events:
+      - on_agent_final_answer
+      - on_tool_execution_success
+      - on_tool_execution_failed
+
+  - name: govern
+    type: AgentComponent
+    prompt_id: govern_prompt
+    inputs:
+      - from: context:goal
+        as: goal
+      - from: context:project_id
+        as: project_id
+      - from: context:inputs.user_rule
+        as: agents_dot_md
+        optional: true
+      - from: context:inputs.workspace_agent_skills
+        as: workspace_agent_skills
+        optional: true
+    toolset:
+      - gitlab_api_get
+      - get_issue
+      - create_issue_note
+      - read_file
+      - run_command
+    ui_log_events:
+      - on_agent_final_answer
+      - on_tool_execution_success
+      - on_tool_execution_failed
+
+routers:
+  - from: plan
+    condition:
+      input: context:plan.final_answer
+      routes:
+        skip: end
+        stop: end
+        default_route: create
+  - from: create
+    condition:
+      input: context:create.final_answer
+      routes:
+        stop: end
+        default_route: verify
+  - from: verify
+    condition:
+      input: context:verify.final_answer
+      routes:
+        stop: end
+        default_route: package
+  - from: package
+    condition:
+      input: context:package.final_answer
+      routes:
+        stop: end
+        default_route: secure
+  - from: secure
+    condition:
+      input: context:secure.final_answer
+      routes:
+        stop: end
+        default_route: release
+  - from: release
+    condition:
+      input: context:release.final_answer
+      routes:
+        stop: end
+        default_route: configure
+  - from: configure
+    condition:
+      input: context:configure.final_answer
+      routes:
+        stop: end
+        default_route: monitor
+  - from: monitor
+    condition:
+      input: context:monitor.final_answer
+      routes:
+        stop: end
+        default_route: govern
+  - from: govern
+    to: end
+
+flow:
+  entry_point: plan
+  inputs:
+    - category: agent_platform_standard_context
+      input_schema:
+        primary_branch:
+          type: string
+          description: Default branch of the repository
+        workload_branch:
+          type: string
+          description: Git ref used by the CI workload
+        session_owner_id:
+          type: string
+          description: ID of the human who started the flow
+
+prompts:
+  - prompt_id: plan_prompt
+    name: Plan
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You are the Plan stage of a hands-off issue-to-production flow.
+        Read and follow skills/plan/SKILL.md before you act.
+        Do not wait for approval. Your final answer is exactly skip, stop, or continue.
+        No further steps after that.
+      user: |
+        Project ID: {{ project_id }}
+        Primary branch: {{ primary_branch }}
+        Goal: {{ goal }}
+        Repository instructions: {{ agents_dot_md }}
+        Skills: {{ workspace_agent_skills }}
+      placeholder: history
+    params:
+      timeout: 180
+
+  - prompt_id: create_prompt
+    name: Create
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You are the Create stage. Read and follow skills/create/SKILL.md.
+        Implement the plan, open one merge request, and record the journey note.
+        Your final answer is exactly continue or stop. No further steps after that.
+      user: |
+        Project ID: {{ project_id }}
+        Primary branch: {{ primary_branch }}
+        Goal: {{ goal }}
+        Repository instructions: {{ agents_dot_md }}
+        Skills: {{ workspace_agent_skills }}
+      placeholder: history
+    params:
+      timeout: 300
+
+  - prompt_id: verify_prompt
+    name: Verify
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You are the Verify stage. Read and follow skills/verify/SKILL.md.
+        Your final answer is exactly continue or stop. No further steps after that.
+      user: |
+        Project ID: {{ project_id }}
+        Goal: {{ goal }}
+        Repository instructions: {{ agents_dot_md }}
+        Skills: {{ workspace_agent_skills }}
+      placeholder: history
+    params:
+      timeout: 240
+
+  - prompt_id: package_prompt
+    name: Package
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You are the Package stage. Read and follow skills/package/SKILL.md.
+        Your final answer is exactly continue or stop. No further steps after that.
+      user: |
+        Project ID: {{ project_id }}
+        Goal: {{ goal }}
+        Skills: {{ workspace_agent_skills }}
+      placeholder: history
+    params:
+      timeout: 180
+
+  - prompt_id: secure_prompt
+    name: Secure
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You are the Secure stage. Read and follow skills/secure/SKILL.md.
+        Fix findings yourself. Do not ask a person to approve a patch.
+        Your final answer is exactly continue or stop. No further steps after that.
+      user: |
+        Project ID: {{ project_id }}
+        Goal: {{ goal }}
+        Skills: {{ workspace_agent_skills }}
+      placeholder: history
+    params:
+      timeout: 240
+
+  - prompt_id: release_prompt
+    name: Release
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You are the Release stage. Read and follow skills/release/SKILL.md.
+        Your final answer is exactly continue or stop. No further steps after that.
+      user: |
+        Project ID: {{ project_id }}
+        Primary branch: {{ primary_branch }}
+        Goal: {{ goal }}
+        Skills: {{ workspace_agent_skills }}
+      placeholder: history
+    params:
+      timeout: 180
+
+  - prompt_id: configure_prompt
+    name: Configure
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You are the Configure stage. Read and follow skills/configure/SKILL.md.
+        Your final answer is exactly continue or stop. No further steps after that.
+      user: |
+        Project ID: {{ project_id }}
+        Goal: {{ goal }}
+        Skills: {{ workspace_agent_skills }}
+      placeholder: history
+    params:
+      timeout: 180
+
+  - prompt_id: monitor_prompt
+    name: Monitor
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You are the Monitor stage. Read and follow skills/monitor/SKILL.md.
+        Your final answer is exactly continue or stop. No further steps after that.
+      user: |
+        Project ID: {{ project_id }}
+        Goal: {{ goal }}
+        Skills: {{ workspace_agent_skills }}
+      placeholder: history
+    params:
+      timeout: 180
+
+  - prompt_id: govern_prompt
+    name: Govern
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You are the Govern stage. Read and follow skills/govern/SKILL.md.
+        Write the final journey note. Your final answer is exactly continue.
+        No further steps after that.
+      user: |
+        Project ID: {{ project_id }}
+        Goal: {{ goal }}
+        Repository instructions: {{ agents_dot_md }}
+        Skills: {{ workspace_agent_skills }}
+      placeholder: history
+    params:
+      timeout: 180

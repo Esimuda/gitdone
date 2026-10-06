@@ -1,0 +1,161 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+  --background: #f6f3ee;
+  --foreground: #1c140f;
+  --card: #fffdfb;
+  --muted: #efe8e0;
+  --muted-foreground: #5c5148;
+  --border: #e4dbd2;
+  --primary: #c2410c;
+  --primary-foreground: #fffaf7;
+  --accent: #6e49cb;
+  --danger: #9f1239;
+  --ring: #c2410c;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #100c0e;
+  --foreground: #f6f1ea;
+  --card: #191316;
+  --muted: #261e22;
+  --muted-foreground: #c9bdb4;
+  --border: #34282d;
+  --primary: #fc6d26;
+  --primary-foreground: #1c0d07;
+  --accent: #c4b5fd;
+  --danger: #fda29b;
+  --ring: #fc6d26;
+}
+
+@theme inline {
+  --font-sans: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-roboto-mono), ui-monospace, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-ring: var(--ring);
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  background-image:
+    radial-gradient(1100px 520px at 110% -12%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 58%),
+    radial-gradient(860px 460px at -18% 108%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 52%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--primary) 34%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: -4.5rem;
+  z-index: 80;
+  border-radius: 0.6rem;
+  background: var(--foreground);
+  color: var(--background);
+  padding: 0.65rem 0.9rem;
+  font-size: 0.875rem;
+}
+
+.skip-link:focus {
+  top: 0.75rem;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+[cmdk-overlay] {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: color-mix(in oklab, #000 55%, transparent);
+}
+
+[cmdk-dialog] {
+  position: fixed;
+  z-index: 70;
+  top: 18vh;
+  left: 50%;
+  width: min(36rem, calc(100vw - 1.5rem));
+  transform: translateX(-50%);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 30px 80px color-mix(in oklab, #000 35%, transparent);
+}
+
+[cmdk-input] {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  padding: 0.95rem 1rem;
+  font: inherit;
+  color: inherit;
+  outline: none;
+}
+
+[cmdk-list] {
+  max-height: 22rem;
+  overflow: auto;
+  padding: 0.4rem;
+}
+
+[cmdk-group-heading] {
+  padding: 0.45rem 0.55rem 0.2rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+[cmdk-item] {
+  display: flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 0.6rem;
+  padding: 0.65rem 0.7rem;
+  font-size: 0.92rem;
+}
+
+[cmdk-item][data-selected="true"] {
+  background: var(--muted);
+}
+
+[cmdk-empty] {
+  padding: 1.2rem 0.8rem 1.4rem;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+}

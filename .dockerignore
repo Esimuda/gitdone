@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.gitignore
+agent-tools
+test-results
+playwright-report
+coverage
+e2e
+*.md
+.env
+.env.*
+!.env.example
+Dockerfile
+.dockerignore
