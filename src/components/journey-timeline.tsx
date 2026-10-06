@@ -31,13 +31,35 @@ export function JourneyTimeline({ stages }: { stages: StageRecord[] }) {
               />
               {index < stages.length - 1 ? <span className="mt-2 w-px flex-1 bg-border" aria-hidden /> : null}
             </div>
-            <article className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+            <article
+              className={`rounded-2xl border p-4 sm:p-5 ${
+                live
+                  ? "border-accent bg-card shadow-[0_24px_60px_-40px_rgba(110,73,203,0.95)]"
+                  : stage.status === "attention"
+                    ? "border-danger bg-card"
+                    : stage.status === "pending"
+                      ? "border-border bg-card/40"
+                      : "border-border bg-card"
+              }`}
+            >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="text-base font-medium tracking-tight">
                   <span className="num mr-2 text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
                   {STAGE_LABEL[stage.stage]}
                 </h3>
-                <p className="text-xs tracking-[0.14em] text-muted-foreground uppercase">{STATUS_LABEL[stage.status]}</p>
+                <p
+                  className={`rounded-full px-2 py-0.5 text-[10px] tracking-[0.14em] uppercase ${
+                    live
+                      ? "bg-accent/15 text-accent"
+                      : stage.status === "passed"
+                        ? "bg-primary/15 text-primary"
+                        : stage.status === "attention"
+                          ? "bg-danger/15 text-danger"
+                          : "text-muted-foreground"
+                  }`}
+                >
+                  {STATUS_LABEL[stage.status]}
+                </p>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{STAGE_BLURB[stage.stage]}</p>
               <p className="mt-3 text-sm leading-relaxed">{stage.summary || "Not started."}</p>

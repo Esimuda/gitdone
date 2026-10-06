@@ -24,12 +24,12 @@ test("capture desktop and mobile", async ({ page }) => {
 
   await page.goto("/mission");
   await expect(page.getByRole("heading", { name: "Mission control" })).toBeVisible();
-  await settle(page);
+  await settle(page, 1500);
   await page.screenshot({ path: `${outDir}/mission-desktop.png`, fullPage: true });
 
   await page.goto("/mission/142");
   await expect(page.getByRole("heading", { name: "Govern" })).toBeVisible();
-  await settle(page);
+  await settle(page, 1500);
   await page.screenshot({ path: `${outDir}/journey-desktop.png`, fullPage: true });
 
   await page.goto("/releases");

@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { StageRail } from "@/components/stage-rail";
 import { getAppData } from "@/lib/data";
 import { formatDuration, touchLabel } from "@/lib/format";
-import { currentStage, isInFlight, isShipped, leadTimeMinutes } from "@/lib/data/metrics";
+import { currentStage, isInFlight, isShipped, leadTimeMinutes, spotlightJourney } from "@/lib/data/metrics";
 import { STAGE_LABEL } from "@/lib/data/stages";
-import { STAGE_IDS } from "@/lib/data/types";
+import { STAGE_IDS, type StageRecord } from "@/lib/data/types";
 
 export const metadata: Metadata = { title: "Mission control" };
 
@@ -13,6 +14,8 @@ export default async function MissionPage() {
   if (data.source === "error") return null;
   const { overview, tallies } = data;
   const maxPassed = Math.max(1, ...tallies.map((tally) => tally.passed));
+  const spotlight = spotlightJourney(data.journeys);
+  const spotlightLive = spotlight ? isInFlight(spotlight) : false;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -45,6 +48,23 @@ export default async function MissionPage() {
           hint={overview.findingsOpen ? `${overview.findingsOpen} still open` : "None left open"}
         />
       </dl>
+
+      {spotlight ? (
+        <section className="mt-10 rounded-3xl border border-border bg-card p-5 shadow-[0_30px_80px_-48px_rgba(252,109,38,0.65)] sm:p-6">
+          <div className="mb-6 flex items-start justify-between gap-3">
+            <div>
+              <p className="font-mono text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+                {spotlightLive ? "In flight" : "Latest ship"} · #{spotlight.issueIid}
+              </p>
+              <h2 className="mt-1 text-xl font-medium tracking-tight">{spotlight.title}</h2>
+            </div>
+            <Link href={`/mission/${spotlight.issueIid}`} className="text-sm text-primary hover:underline">
+              Open
+            </Link>
+          </div>
+          <StageRail stages={spotlight.stages} />
+        </section>
+      ) : null}
 
       <section className="mt-10 rounded-3xl border border-border bg-card p-5 sm:p-6" aria-label="Stage coverage">
         <h2 className="text-sm font-medium">Where work has passed</h2>
@@ -88,20 +108,7 @@ export default async function MissionPage() {
                         {stage ? ` · ${STAGE_LABEL[stage.stage]}` : ""}
                       </p>
                       <p className="mt-1 font-medium tracking-tight">{journey.title}</p>
-                      <p className="mt-2 flex flex-wrap gap-1" aria-hidden>
-                        {STAGE_IDS.map((id) => {
-                          const record = journey.stages.find((item) => item.stage === id);
-                          const color =
-                            record?.status === "passed"
-                              ? "bg-primary"
-                              : record?.status === "running"
-                                ? "bg-accent"
-                                : record?.status === "attention"
-                                  ? "bg-danger"
-                                  : "bg-border";
-                          return <span key={id} className={`size-1.5 rounded-full ${color}`} />;
-                        })}
-                      </p>
+                      <StageTrack stages={journey.stages} />
                     </div>
                     <div className="text-sm text-muted-foreground sm:text-right">
                       <p className="num">{lead !== null ? formatDuration(lead) : "Live"}</p>
@@ -115,6 +122,31 @@ export default async function MissionPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function StageTrack({ stages }: { stages: StageRecord[] }) {
+  return (
+    <p className="mt-3 flex items-center" aria-hidden>
+      {STAGE_IDS.map((id, index) => {
+        const record = stages.find((item) => item.stage === id);
+        const dot =
+          record?.status === "passed"
+            ? "bg-primary"
+            : record?.status === "running"
+              ? "bg-accent shadow-[0_0_0_3px_color-mix(in_oklab,var(--accent)_30%,transparent)] motion-safe:animate-pulse"
+              : record?.status === "attention"
+                ? "bg-danger"
+                : "bg-border";
+        const line = record?.status === "passed" ? "bg-primary/70" : "bg-border";
+        return (
+          <span key={id} className="flex min-w-0 flex-1 items-center">
+            <span className={`size-2 shrink-0 rounded-full ${dot}`} />
+            {index < STAGE_IDS.length - 1 ? <span className={`mx-1 h-px min-w-1 flex-1 ${line}`} /> : null}
+          </span>
+        );
+      })}
+    </p>
   );
 }
 
