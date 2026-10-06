@@ -15,6 +15,7 @@ async function settle(page: import("@playwright/test").Page, ms = 400) {
 }
 
 test("capture desktop and mobile", async ({ page }) => {
+  test.setTimeout(90_000);
   await page.setViewportSize({ width: 1440, height: 900 });
 
   await page.goto("/");

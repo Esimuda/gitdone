@@ -2,14 +2,9 @@
 
 import { useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { formatDuration } from "@/lib/format";
 
-export function CountUp({
-  value,
-  format = (next) => String(next),
-}: {
-  value: number;
-  format?: (next: number) => string;
-}) {
+export function CountUp({ value, kind = "number" }: { value: number; kind?: "number" | "duration" }) {
   const reduce = useReducedMotion();
   const [shown, setShown] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
@@ -44,5 +39,5 @@ export function CountUp({
     };
   }, [reduce, value]);
 
-  return <span ref={ref}>{format(display)}</span>;
+  return <span ref={ref}>{kind === "duration" ? formatDuration(display) : String(display)}</span>;
 }

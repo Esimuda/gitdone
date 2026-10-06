@@ -56,7 +56,7 @@ export default async function HomePage() {
           <Metric
             label="Last zero-touch ship"
             value={
-              flagshipLead !== null ? <CountUp value={flagshipLead} format={formatDuration} /> : "—"
+              flagshipLead !== null ? <CountUp value={flagshipLead} kind="duration" /> : "—"
             }
             hint={flagship ? `#${flagship.issueIid} opened to production` : "No ship yet"}
           />
@@ -64,7 +64,7 @@ export default async function HomePage() {
             label="Median lead time"
             value={
               overview.leadTimeMinutes !== null ? (
-                <CountUp value={overview.leadTimeMinutes} format={formatDuration} />
+                <CountUp value={overview.leadTimeMinutes} kind="duration" />
               ) : (
                 "—"
               )
