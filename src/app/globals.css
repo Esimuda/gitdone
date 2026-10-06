@@ -251,3 +251,23 @@ body {
     opacity: 1;
   }
 }
+
+.how-step {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .how-step {
+    animation: how-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@keyframes how-rise {
+  from {
+    transform: translateY(12px);
+  }
+  to {
+    transform: none;
+  }
+}
