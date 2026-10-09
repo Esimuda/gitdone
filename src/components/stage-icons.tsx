@@ -8,6 +8,7 @@ import {
   Scale,
   Shield,
   Tag,
+  Undo2,
   type LucideIcon,
 } from "lucide-react";
 import type { StageId } from "@/lib/data/types";
@@ -22,4 +23,5 @@ export const STAGE_ICON: Record<StageId, LucideIcon> = {
   configure: Cloud,
   monitor: Activity,
   govern: Scale,
+  rollback: Undo2,
 };

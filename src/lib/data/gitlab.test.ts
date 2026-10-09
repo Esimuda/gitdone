@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildGitlabUrl, inferJourney, loadGitlabAppData, mapRelease, parseChangelog } from "./gitlab";
+import { buildGitlabUrl, inferJourney, issuesForJourneys, loadGitlabAppData, mapRelease, parseChangelog } from "./gitlab";
 import type { GitlabIssue, GitlabMergeRequest, GitlabPipeline, GitlabRelease } from "./gitlab";
 
 const issue: GitlabIssue = {
@@ -21,6 +21,15 @@ describe("gitlab urls", () => {
     expect(buildGitlabUrl("https://gitlab.example.com", "42", "")).toBe(
       "https://gitlab.example.com/api/v4/projects/42",
     );
+  });
+});
+
+describe("issue selection", () => {
+  it("reads ship issues when any are labelled, and everything when none are", () => {
+    const plain = { ...issue, iid: 3, labels: ["docs"] };
+    const labelled = { ...issue, iid: 4, labels: ["Ship"] };
+    expect(issuesForJourneys([plain, labelled]).map((item) => item.iid)).toEqual([4]);
+    expect(issuesForJourneys([plain])).toHaveLength(1);
   });
 });
 

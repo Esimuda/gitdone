@@ -6,27 +6,27 @@ import { escapeXml, formatDuration, formatTimestamp } from "../format";
 describe("announcements", () => {
   it("keeps the X post inside 280 characters, including a long summary", () => {
     const post = buildAnnouncements({
-      projectName: "keel",
+      projectName: "GitDone",
       tag: "v0.4.2",
       summary: "word ".repeat(80),
       bullets: ["one", "two"],
-      url: "https://gitlab.com/community/keel/-/releases/v0.4.2",
+      url: "https://gitlab.com/gitdone/gitdone/-/releases/v0.9.0",
       humanTouches: 0,
     });
     expect(post.x.length).toBeLessThanOrEqual(280);
     expect(post.x).toContain("zero human touches");
-    expect(post.discord).toContain("**keel v0.4.2**");
+    expect(post.discord).toContain("**GitDone v0.4.2**");
     expect(post.discord).toContain("• one");
     expect(post.telegram).toContain("• two");
   });
 
   it("describes a single human touch without claiming zero", () => {
     const post = buildAnnouncements({
-      projectName: "keel",
+      projectName: "GitDone",
       tag: "v0.4.1",
       summary: "Grant reviewers get a one-page guide.",
       bullets: ["One screen"],
-      url: "https://gitlab.com/community/keel/-/releases/v0.4.1",
+      url: "https://gitlab.com/gitdone/gitdone/-/releases/v0.8.2",
       humanTouches: 1,
     });
     expect(post.x).toContain("1 human touch");
@@ -50,6 +50,6 @@ describe("format", () => {
   });
 
   it("escapes XML", () => {
-    expect(escapeXml(`keel & "crew" <3`)).toBe("keel &amp; &quot;crew&quot; &lt;3");
+    expect(escapeXml(`GitDone & "crew" <3`)).toBe("GitDone &amp; &quot;crew&quot; &lt;3");
   });
 });

@@ -18,11 +18,13 @@ The Duo flow posts this JSON on the issue as a GitLab note. GitDone reads the ne
 
 `stages` entries use these ids, in this order: `plan`, `create`, `verify`, `package`, `secure`, `release`, `configure`, `monitor`, `govern`.
 
+`rollback` is optional. Include it only when a production deploy was sent back to the previous revision. It sits after `monitor` and before `govern`. `passed` means traffic moved back. `attention` means the guard wanted to move traffic and could not. Omit the stage when the guard held. A missing `rollback` stage is not "waiting to roll back."
+
 Each stage:
 
 | Field | Required | Values |
 | --- | --- | --- |
-| `stage` | yes | one of the nine ids |
+| `stage` | yes | one of the nine ids, or `rollback` |
 | `status` | yes | `pending`, `running`, `passed`, `attention` |
 | `summary` | yes | one or two sentences a maintainer can read |
 | `details` | no | short strings |

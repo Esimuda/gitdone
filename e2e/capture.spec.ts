@@ -2,9 +2,11 @@ import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 
 const outDir = "/opt/cursor/artifacts/screenshots";
+const artifactDir = "/opt/cursor/artifacts";
 
 test.beforeAll(async () => {
   await mkdir(outDir, { recursive: true });
+  await mkdir(artifactDir, { recursive: true });
 });
 
 async function settle(page: import("@playwright/test").Page, ms = 400) {
@@ -35,22 +37,30 @@ test("capture desktop and mobile", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await tour(page);
   await settle(page, 1400);
-  await expect(page.getByText("1 h 17 min").first()).toBeVisible();
-  await expect(page.getByText("47 min").first()).toBeVisible();
+  await expect(page.getByText("1 h 11 min").first()).toBeVisible();
+  await expect(page.getByText("52 min").first()).toBeVisible();
   await expect(page.getByText("9/9").first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Label one issue" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "One agent crosses nine stages" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Finding" }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Announced" }).first()).toBeVisible();
+  await expect(page.getByText("Sample data").first()).toBeVisible();
+  await page.screenshot({ path: `${artifactDir}/landing.png`, fullPage: true });
   await page.screenshot({ path: `${outDir}/landing-desktop.png`, fullPage: true });
 
   await page.goto("/mission");
-  await expect(page.getByRole("heading", { name: "Mission control" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("announced by morning");
   await settle(page, 1500);
   await page.screenshot({ path: `${outDir}/mission-desktop.png`, fullPage: true });
 
-  await page.goto("/mission/142");
+  await page.goto("/mission/214");
   await expect(page.getByRole("heading", { name: "Govern" })).toBeVisible();
   await settle(page, 1500);
   await page.screenshot({ path: `${outDir}/journey-desktop.png`, fullPage: true });
+
+  await page.goto("/mission/207");
+  await expect(page.getByRole("heading", { name: "Rollback" })).toBeVisible();
+  await expect(page.getByText("Rolled back").first()).toBeVisible();
+  await settle(page, 1200);
+  await page.screenshot({ path: `${artifactDir}/rollback.png`, fullPage: true });
 
   await page.goto("/releases");
   await expect(page.getByRole("heading", { name: "Releases" })).toBeVisible();

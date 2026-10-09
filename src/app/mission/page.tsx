@@ -1,12 +1,14 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { MissionViz } from "@/components/mission-viz";
+import { OvernightPath } from "@/components/overnight-path";
 import { StageRail } from "@/components/stage-rail";
+import { OVERNIGHT_HEADLINE, PRODUCT_NAME } from "@/config/brand";
 import { getAppData } from "@/lib/data";
 import { formatDuration, formatTimestamp, touchLabel } from "@/lib/format";
-import { currentStage, isInFlight, isShipped, leadTimeMinutes, spotlightJourney } from "@/lib/data/metrics";
+import { currentStage, flagshipJourney, journeyState, leadTimeMinutes, spotlightJourney } from "@/lib/data/metrics";
 import { STAGE_LABEL, stageById } from "@/lib/data/stages";
-import { STAGE_IDS, type StageRecord } from "@/lib/data/types";
+import type { StageRecord } from "@/lib/data/types";
 
 export const metadata: Metadata = { title: "Mission control" };
 
@@ -15,7 +17,8 @@ export default async function MissionPage() {
   if (data.source === "error") return null;
   const { overview, tallies } = data;
   const spotlight = spotlightJourney(data.journeys);
-  const spotlightLive = spotlight ? isInFlight(spotlight) : false;
+  const spotlightLive = spotlight ? journeyState(spotlight) === "In flight" : false;
+  const flagship = flagshipJourney(data.journeys);
   const leads = data.journeys
     .map((journey) => {
       const minutes = leadTimeMinutes(journey);
@@ -42,14 +45,17 @@ export default async function MissionPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-      <p className="text-xs tracking-[0.18em] text-primary uppercase">{data.project.name}</p>
-      <h1 className="mt-3 text-4xl font-medium tracking-tight sm:text-5xl">Mission control</h1>
-      <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-        Every labelled issue, and where the agent is with it. Lead time is measured from the issue opening to
-        production.
+      <p className="text-xs tracking-[0.18em] text-primary uppercase">
+        Mission control · {PRODUCT_NAME} ships {PRODUCT_NAME}
       </p>
+      <h1 className="mt-3 max-w-4xl text-4xl font-medium tracking-tight text-balance sm:text-5xl">{OVERNIGHT_HEADLINE}</h1>
+      <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
+        Every ship issue on {data.project.path}. Lead time runs from the issue opening to production. A rollback is
+        counted on its own.
+      </p>
+      {flagship ? <OvernightPath journey={flagship} /> : null}
 
-      <dl className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <dl className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Tile
           label="Issue to production"
           value={overview.leadTimeMinutes !== null ? formatDuration(overview.leadTimeMinutes) : "—"}
@@ -64,6 +70,11 @@ export default async function MissionPage() {
           label="Stage coverage"
           value={`${overview.stageCoverage}/${overview.stageCount}`}
           hint={`${overview.shipped} shipped · ${overview.inFlight} in flight`}
+        />
+        <Tile
+          label="Rollbacks"
+          value={String(overview.rollbacks)}
+          hint={overview.rollbacks ? "Traffic shifted to the previous revision" : "The guard has held"}
         />
         <Tile
           label="Findings auto-resolved"
@@ -106,7 +117,7 @@ export default async function MissionPage() {
             {data.journeys.map((journey) => {
               const stage = currentStage(journey);
               const lead = leadTimeMinutes(journey);
-              const state = isShipped(journey) ? "Shipped" : isInFlight(journey) ? "In flight" : "Waiting";
+              const state = journeyState(journey);
               return (
                 <li key={journey.issueIid}>
                   <Link
@@ -115,7 +126,8 @@ export default async function MissionPage() {
                   >
                     <div>
                       <p className="text-xs text-muted-foreground">
-                        <span className="num">#{journey.issueIid}</span> · {state}
+                        <span className="num">#{journey.issueIid}</span>
+                        <span className={state === "Rolled back" ? " text-danger" : ""}> · {state}</span>
                         {stage ? ` · ${STAGE_LABEL[stage.stage]}` : ""}
                       </p>
                       <p className="mt-1 font-medium tracking-tight">{journey.title}</p>
@@ -139,21 +151,22 @@ export default async function MissionPage() {
 function StageTrack({ stages }: { stages: StageRecord[] }) {
   return (
     <p className="mt-3 flex items-center" aria-hidden>
-      {STAGE_IDS.map((id, index) => {
-        const record = stages.find((item) => item.stage === id);
-        const dot =
-          record?.status === "passed"
+      {stages.map((record, index) => {
+        const rolled = record.stage === "rollback" && record.status !== "pending";
+        const dot = rolled
+          ? "bg-danger"
+          : record.status === "passed"
             ? "bg-primary"
-            : record?.status === "running"
+            : record.status === "running"
               ? "bg-accent shadow-[0_0_0_3px_color-mix(in_oklab,var(--accent)_30%,transparent)] motion-safe:animate-pulse"
-              : record?.status === "attention"
+              : record.status === "attention"
                 ? "bg-danger"
                 : "bg-border";
-        const line = record?.status === "passed" ? "bg-primary/70" : "bg-border";
+        const line = rolled ? "bg-danger/70" : record.status === "passed" ? "bg-primary/70" : "bg-border";
         return (
-          <span key={id} className="flex min-w-0 flex-1 items-center">
+          <span key={record.stage} className="flex min-w-0 flex-1 items-center">
             <span className={`size-2 shrink-0 rounded-full ${dot}`} />
-            {index < STAGE_IDS.length - 1 ? <span className={`mx-1 h-px min-w-1 flex-1 ${line}`} /> : null}
+            {index < stages.length - 1 ? <span className={`mx-1 h-px min-w-1 flex-1 ${line}`} /> : null}
           </span>
         );
       })}

@@ -7,6 +7,19 @@ export function isShipped(journey: Journey): boolean {
   return stageById(journey.stages, "configure")?.status === "passed";
 }
 
+/** A rollback stage that actually ran. A missing stage means the guard held. */
+export function didRollback(journey: Journey): boolean {
+  const record = stageById(journey.stages, "rollback");
+  return record?.status === "passed" || record?.status === "running" || record?.status === "attention";
+}
+
+export function journeyState(journey: Journey): "Rolled back" | "Shipped" | "In flight" | "Waiting" {
+  if (didRollback(journey)) return "Rolled back";
+  if (isShipped(journey)) return "Shipped";
+  if (isInFlight(journey)) return "In flight";
+  return "Waiting";
+}
+
 export function isInFlight(journey: Journey): boolean {
   if (isShipped(journey)) return false;
   return journey.stages.some(
@@ -67,6 +80,7 @@ export function computeOverview(journeys: Journey[]): Overview {
   }
   const shippedJourneys = journeys.filter(isShipped);
   const withTouchData = shippedJourneys.filter((journey) => journey.humanTouches !== null);
+  const quietShips = withTouchData.filter((journey) => journey.humanTouches === 0 && !didRollback(journey));
   return {
     leadTimeMinutes: median(leadTimes),
     leadTimeSample: leadTimes.length,
@@ -78,8 +92,9 @@ export function computeOverview(journeys: Journey[]): Overview {
     findingsOpen,
     shipped: shippedJourneys.length,
     inFlight: journeys.filter(isInFlight).length,
-    zeroTouchShips: withTouchData.filter((journey) => journey.humanTouches === 0).length,
+    zeroTouchShips: quietShips.length,
     shipsWithTouchData: withTouchData.length,
+    rollbacks: journeys.filter(didRollback).length,
   };
 }
 
@@ -102,9 +117,9 @@ export function sortJourneys(journeys: Journey[]): Journey[] {
   });
 }
 
-/** Most recent shipped journey that recorded zero human touches, else the latest ship. */
+/** Latest quiet ship. A rollback is not a quiet ship. */
 export function flagshipJourney(journeys: Journey[]): Journey | undefined {
-  const shipped = journeys.filter(isShipped);
+  const shipped = journeys.filter((journey) => isShipped(journey) && !didRollback(journey));
   const zero = shipped.filter((journey) => journey.humanTouches === 0);
   const pool = zero.length > 0 ? zero : shipped;
   return [...pool].sort((a, b) => {
@@ -122,8 +137,10 @@ export function spotlightJourney(journeys: Journey[]): Journey | undefined {
 }
 
 export function currentStage(journey: Journey) {
+  const running = journey.stages.find((stage) => stage.status === "running");
+  if (running) return running;
+  if (didRollback(journey)) return stageById(journey.stages, "rollback") ?? journey.stages[0];
   return (
-    journey.stages.find((stage) => stage.status === "running") ??
     journey.stages.find((stage) => stage.status === "attention") ??
     [...journey.stages].reverse().find((stage) => stage.status === "passed") ??
     journey.stages[0]

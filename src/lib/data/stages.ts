@@ -1,4 +1,4 @@
-import { STAGE_IDS, type StageId, type StageRecord, type StageStatus } from "./types";
+import { ARTIFACT_STAGE_IDS, ROLLBACK_STAGE, STAGE_IDS, type StageId, type StageRecord, type StageStatus } from "./types";
 
 export const STAGE_LABEL: Record<StageId, string> = {
   plan: "Plan",
@@ -10,6 +10,7 @@ export const STAGE_LABEL: Record<StageId, string> = {
   configure: "Configure",
   monitor: "Monitor",
   govern: "Govern",
+  rollback: "Rollback",
 };
 
 export const STAGE_BLURB: Record<StageId, string> = {
@@ -20,8 +21,9 @@ export const STAGE_BLURB: Record<StageId, string> = {
   secure: "Findings triaged and fixed",
   release: "GitLab Release and changelog",
   configure: "Deploy to Cloud Run",
-  monitor: "Smoke check against the live URL",
-  govern: "Evidence and the community post",
+  monitor: "Health and error rate after the deploy",
+  govern: "Evidence and the morning post",
+  rollback: "Shift traffic back, then reopen the issue",
 };
 
 export function emptyStage(stage: StageId, status: StageStatus = "pending"): StageRecord {
@@ -34,12 +36,19 @@ export function emptyStage(stage: StageId, status: StageStatus = "pending"): Sta
   };
 }
 
+const ARTIFACT_STAGE_SET = new Set<string>(ARTIFACT_STAGE_IDS);
+
 export function normalizeStages(input: StageRecord[]): StageRecord[] {
   const byId = new Map<StageId, StageRecord>();
   for (const stage of input) {
-    if (STAGE_IDS.includes(stage.stage)) byId.set(stage.stage, stage);
+    if (ARTIFACT_STAGE_SET.has(stage.stage)) byId.set(stage.stage, stage);
   }
-  return STAGE_IDS.map((id) => byId.get(id) ?? emptyStage(id));
+  const core = STAGE_IDS.map((id) => byId.get(id) ?? emptyStage(id));
+  const rollback = byId.get(ROLLBACK_STAGE);
+  if (!rollback) return core;
+  const monitorAt = core.findIndex((stage) => stage.stage === "monitor");
+  core.splice(monitorAt + 1, 0, rollback);
+  return core;
 }
 
 export function stageById(stages: StageRecord[], id: StageId): StageRecord | undefined {

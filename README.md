@@ -6,7 +6,33 @@ GitDone is the public face of a single [GitLab Duo Agent Platform](https://docs.
 
 The name lives in one place: `PRODUCT_NAME` in [`src/config/brand.ts`](src/config/brand.ts). The mark — a branch with two commits that becomes a check — is defined in [`src/brand/mark.ts`](src/brand/mark.ts) and drawn in [`src/components/logo.tsx`](src/components/logo.tsx). Favicon, Apple touch icon, and Open Graph image are regenerated from that file with `node --experimental-strip-types scripts/render-brand.ts`.
 
-This repository was created for the GitLab Transcend “Life After Code” hackathon (Path A, hands-off). It is meant to be pushed to a public GitLab project under the MIT license. The pipeline and the Duo flow have not been executed yet. GitLab access for the hackathon was not available while this was written.
+This repository was created for the GitLab Transcend “Life After Code” hackathon (Path A, hands-off). It is meant to be pushed to a public GitLab project under the MIT license.
+
+## Why Duo
+
+A pipeline can build an image, scan it, and roll Cloud Run traffic back. It cannot notice a secret-detection finding at 02:14, open the merge request, patch the Dockerfile, wait for the pipeline, and write down what it did on the issue.
+
+Without Duo Agent Platform that loop stops at the finding. Someone has to be awake to read the report, write the patch, merge it, and tell the community in the morning. GitDone’s CI job `rollback-guard` can still shift traffic if a deploy degrades. The flow is what turns that event into a journey note, a reopened issue, and a release post that was ready before morning. One custom flow runs all nine stages. It does not call another flow, because GitLab does not allow that.
+
+## Verify in 60 seconds
+
+```bash
+npm ci
+npm test
+npm run dev
+```
+
+Open [http://127.0.0.1:3847](http://127.0.0.1:3847). You should see the overnight path (finding, patched, checked, deployed, announced), the badge **Sample data**, and a link to the deploy that was sent back. Mission control shows a **Rollbacks** count. Nothing here calls GitLab until both `GITLAB_TOKEN` and `GITLAB_PROJECT_ID` are set.
+
+## Built during the hackathon
+
+Honest status, as of this commit:
+
+- The Next.js app, the journey parser, the sample journeys, the tests, the Dockerfile, and the health check are real and run locally.
+- Sample mode is this repository shipping itself, not a fictional product. The badge stays until GitDone is reading real journey notes from GitLab.
+- The Duo flow, the stage skills, and `.gitlab-ci.yml` are drafts written from GitLab’s docs. They have not been executed on GitLab. Access to push was approved after they were written. The day-1 checklist is [`docs/capability-test.md`](docs/capability-test.md).
+- The rollback decision in `src/lib/rollback-guard.ts` is tested. The Cloud Run traffic shift, the monitoring query, and `identity: google_cloud` are not, until the `rollback-guard` job runs.
+- Announcement drafts are copy buttons. The flow does not post to X, Discord, or Telegram.
 
 ## How it works
 
@@ -16,7 +42,7 @@ This repository was created for the GitLab Transcend “Life After Code” hacka
 4. [`.gitlab-ci.yml`](.gitlab-ci.yml) tests, scans, builds the image, copies it to Artifact Registry, and deploys staging then production on Cloud Run.
 5. GitDone reads issues, merge requests, pipelines, releases, and the journey note. The release hub turns the release description into a changelog and drafts posts for X, Discord, and Telegram.
 
-With `GITLAB_TOKEN` and `GITLAB_PROJECT_ID` unset, the app serves a seeded project called keel so a judge can open it with no setup. The banner says **Demo data**.
+With `GITLAB_TOKEN` and `GITLAB_PROJECT_ID` unset, the app shows sample journeys of GitDone shipping this repository. The header badge says **Sample data**. Set both variables and the GitLab API is the only source.
 
 ## Stage coverage
 
@@ -29,8 +55,9 @@ With `GITLAB_TOKEN` and `GITLAB_PROJECT_ID` unset, the app serves a seeded proje
 | Secure | Triages SAST and secret detection. Patches findings on the branch. | Findings found and resolved |
 | Release | Merges, tags, and publishes a GitLab Release whose description is the changelog. | Release link |
 | Configure | Watches the Cloud Run production deploy of that image. | Deploy URL |
-| Monitor | `GET /api/health` on the production URL. | Smoke result |
-| Govern | Final journey note: pipeline, findings, release, smoke, human-touch count. Drafts stay in GitDone. | Compliance evidence |
+| Monitor | For five minutes after production deploy, check `/api/health` and the Cloud Run 5xx rate. The CI job `rollback-guard` does the same. | Guard result |
+| Rollback | Only if the guard trips: shift traffic to the previous revision, post a `rollback` stage, reopen the issue. Govern does not announce that revision. | Distinct timeline state and a mission-control count |
+| Govern | Final journey note: pipeline, findings, release, guard result, human-touch count. Drafts stay in GitDone. | Compliance evidence |
 
 A hands-off run records `humanTouches: 0`. The one-question pause in Plan is the only designed touch, and only when the issue does not say what “done” means.
 
@@ -84,9 +111,9 @@ npm run test:e2e
 
 `npm start` listens on `$PORT` or 3000. The dev server and the e2e server use port 3847.
 
-### Demo mode
+### Sample data
 
-Leave `GITLAB_TOKEN` and `GITLAB_PROJECT_ID` unset. The seeded project is keel, a volunteer-run session-receipt library. You get six issues (two live, four shipped), four releases, announcements, and metrics computed from those records. Deploy links use `keel.example.com` and are labelled as demo URLs.
+Leave `GITLAB_TOKEN` and `GITLAB_PROJECT_ID` unset. The project on screen is GitDone, path `gitdone/gitdone`, which is a stand-in until the real project path comes back from the API. You get the overnight security ship, one rollback, one in-flight issue, and earlier releases. Deploy links use `gitdone.example.com` and are marked sample URLs. The badge says **Sample data**.
 
 ### Live GitLab project
 
@@ -99,7 +126,7 @@ Copy [`.env.example`](.env.example).
 | `GITLAB_BASE_URL` | no | Defaults to `https://gitlab.com`. |
 | `SUBSCRIBE_WEBHOOK_URL` | no | `POST /api/subscribe` forwards `{ "email" }` here. Otherwise the address stays in the browser. |
 
-Set both token and project id, or neither. One of them produces an error instead of silently showing demo data.
+Set both token and project id, or neither. One of them produces an error instead of silently showing sample data. Issues labelled `ship` are preferred once any exist. A journey note wins over inference.
 
 The client reads, in order: project, issues, merge requests, releases, pipelines, then issue notes. A note that contains `<!-- journey:v1 { ... } -->` becomes the timeline. Without that note, stages are inferred from the MR, pipeline, and release, and the page says so. Responses are not cached, so the token is not stored in the Next.js fetch cache.
 
@@ -151,6 +178,8 @@ Checked against GitLab docs while writing. Not executed on GitLab.com.
 - The Google Cloud Run component repository was archived. The pipeline pins `@0.1.0`, which is the version in GitLab’s tutorial, including the `as` input used to name the two deploy jobs. Resolution of that tag was not tested.
 - Playwright’s CI image tag `mcr.microsoft.com/playwright:v1.63.0-jammy` must match the installed `@playwright/test`. Confirm the tag exists before the first green pipeline.
 - `STAGING_SERVICE_URL` is a placeholder. The tutorial does not show the component exporting the Cloud Run URL.
+- `rollback-guard` uses `identity: google_cloud`, `gcloud run services update-traffic`, and `run.googleapis.com/request_count`. None of those calls have been executed. The job name `deploy-production` comes from the component `as` input, which is also unverified.
+- The Monitor prompt timeout is 600 seconds so the five-minute window fits. The catalog schema’s upper bound was not checked.
 
 ## License
 

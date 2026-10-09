@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { AnnouncementPanel } from "@/components/announcement-panel";
-import { SubscribeDialog } from "@/components/subscribe-dialog";
 import { getAppData } from "@/lib/data";
 import { formatTimestamp, touchLabel } from "@/lib/format";
 
@@ -27,12 +26,6 @@ export default async function ReleasesPage() {
           <p className="mt-3 max-w-xl text-base leading-relaxed text-muted-foreground">
             The changelog the community can read, and the announcement the flow already drafted.
           </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <a href="/feed.xml" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
-            RSS
-          </a>
-          <SubscribeDialog />
         </div>
       </div>
 

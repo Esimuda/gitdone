@@ -12,7 +12,7 @@ export function resolveGitlabEnv(env: Record<string, string | undefined>): Gitla
     return {
       mode: "misconfigured",
       message:
-        "Set both GITLAB_TOKEN and GITLAB_PROJECT_ID, or leave both unset to stay on seeded demo data.",
+        "Set both GITLAB_TOKEN and GITLAB_PROJECT_ID to read this repository from GitLab, or leave both unset to show sample data.",
     };
   }
   try {

@@ -9,7 +9,7 @@ describe("journey notes", () => {
       const read = readLatestJourney([{ body: `hello\n${note}\nthanks` }]);
       expect(read?.issueIid).toBe(journey.issueIid);
       expect(read?.humanTouches).toBe(journey.humanTouches);
-      expect(read?.stages).toHaveLength(9);
+      expect(read?.stages).toHaveLength(journey.stages.length);
       expect(read?.stages[0]?.status).toBe(journey.stages[0]?.status);
     }
   });
@@ -46,5 +46,22 @@ describe("journey notes", () => {
     expect(parsed?.stages).toHaveLength(9);
     expect(parsed?.stages[1]?.status).toBe("pending");
     expect(parsed?.touchNotes).toEqual([]);
+  });
+
+  it("keeps a rollback stage after monitor", () => {
+    const raw = JSON.stringify({
+      version: 1,
+      issueIid: 207,
+      humanTouches: 0,
+      stages: [
+        { stage: "monitor", status: "attention", summary: "Error rate climbed." },
+        { stage: "rollback", status: "passed", summary: "Traffic is back on the previous revision." },
+        { stage: "govern", status: "pending", summary: "" },
+      ],
+    });
+    const parsed = parseJourneyArtifact(raw);
+    const ids = parsed?.stages.map((stage) => stage.stage);
+    expect(ids?.indexOf("rollback")).toBe((ids?.indexOf("monitor") ?? 0) + 1);
+    expect(parsed?.stages.find((stage) => stage.stage === "rollback")?.status).toBe("passed");
   });
 });

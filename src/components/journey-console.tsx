@@ -24,18 +24,28 @@ function chipIcon(label: string) {
   return Link2;
 }
 
-function tone(status: StageRecord["status"]) {
+function isRollback(stage: StageRecord, status: StageRecord["status"]) {
+  return stage.stage === "rollback" && status !== "pending";
+}
+
+function tone(stage: StageRecord, status: StageRecord["status"]) {
+  if (isRollback(stage, status)) return "border-danger shadow-[0_24px_70px_-40px_rgba(159,18,57,0.55)]";
   if (status === "running") return "border-accent shadow-[0_24px_70px_-40px_rgba(107,79,187,0.9)]";
   if (status === "attention") return "border-danger";
   if (status === "passed") return "border-border";
   return "border-border opacity-70";
 }
 
-function statusClass(status: StageRecord["status"]) {
+function statusClass(stage: StageRecord, status: StageRecord["status"]) {
+  if (isRollback(stage, status) || status === "attention") return "bg-danger/15 text-danger";
   if (status === "running") return "bg-accent/15 text-accent";
   if (status === "passed") return "bg-primary/15 text-primary";
-  if (status === "attention") return "bg-danger/15 text-danger";
   return "bg-muted text-muted-foreground";
+}
+
+function statusLabel(stage: StageRecord, status: StageRecord["status"]) {
+  if (isRollback(stage, status) && status === "passed") return "Rolled back";
+  return STATUS_LABEL[status];
 }
 
 export function JourneyConsole({ stages }: { stages: StageRecord[] }) {
@@ -124,7 +134,7 @@ export function JourneyConsole({ stages }: { stages: StageRecord[] }) {
             const visible = cursor === null || cursor >= stages.length || index <= cursor;
             return (
               <li key={stage.stage} id={`stage-${stage.stage}`} className={cn("scroll-mt-28", visible ? "" : "opacity-40")}>
-                <article className={cn("rounded-3xl border bg-card p-4 sm:p-5", tone(status))}>
+                <article className={cn("rounded-3xl border bg-card p-4 sm:p-5", tone(stage, status))}>
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h3 className="flex items-center gap-2 text-base font-medium tracking-tight">
                       <span className="flex size-9 items-center justify-center rounded-2xl bg-muted text-primary">
@@ -133,8 +143,8 @@ export function JourneyConsole({ stages }: { stages: StageRecord[] }) {
                       <span className="num text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
                       {STAGE_LABEL[stage.stage]}
                     </h3>
-                    <p className={cn("rounded-full px-2.5 py-1 text-[10px] tracking-[0.14em] uppercase", statusClass(status))}>
-                      {STATUS_LABEL[status]}
+                    <p className={cn("rounded-full px-2.5 py-1 text-[10px] tracking-[0.14em] uppercase", statusClass(stage, status))}>
+                      {statusLabel(stage, status)}
                     </p>
                   </div>
                   <p className="mt-3 text-xs text-muted-foreground">{STAGE_BLURB[stage.stage]}</p>

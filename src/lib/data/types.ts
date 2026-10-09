@@ -10,7 +10,12 @@ export const STAGE_IDS = [
   "govern",
 ] as const;
 
-export type StageId = (typeof STAGE_IDS)[number];
+/** Present only when a production deploy was sent back to the previous revision. */
+export const ROLLBACK_STAGE = "rollback" as const;
+
+export const ARTIFACT_STAGE_IDS = [...STAGE_IDS, ROLLBACK_STAGE] as const;
+
+export type StageId = (typeof ARTIFACT_STAGE_IDS)[number];
 
 export type StageStatus = "pending" | "running" | "passed" | "attention";
 
@@ -107,6 +112,7 @@ export type Overview = {
   inFlight: number;
   zeroTouchShips: number;
   shipsWithTouchData: number;
+  rollbacks: number;
 };
 
 export type StageTally = {

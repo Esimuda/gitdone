@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { normalizeStages } from "./stages";
-import { STAGE_IDS, type JourneyArtifact, type StageRecord } from "./types";
+import { ARTIFACT_STAGE_IDS, type JourneyArtifact, type StageRecord } from "./types";
 
 const stageSchema = z.object({
-  stage: z.enum(STAGE_IDS),
+  stage: z.enum(ARTIFACT_STAGE_IDS),
   status: z.enum(["pending", "running", "passed", "attention"]),
   startedAt: z.string().optional(),
   completedAt: z.string().optional(),

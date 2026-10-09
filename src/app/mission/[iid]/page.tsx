@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { JourneyConsole } from "@/components/journey-console";
 import { getAppData } from "@/lib/data";
 import { formatDuration, formatTimestamp, touchLabel } from "@/lib/format";
-import { leadTimeMinutes } from "@/lib/data/metrics";
+import { didRollback, leadTimeMinutes } from "@/lib/data/metrics";
 
 type Params = { iid: string };
 
@@ -28,7 +28,7 @@ export default async function JourneyPage({ params }: { params: Promise<Params> 
       ? "Recorded by the flow"
       : journey.provenance === "inferred"
         ? "Inferred from GitLab. The flow has not written a journey record yet."
-        : "Seeded demo record";
+        : "Sample record for this repository";
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -61,7 +61,12 @@ export default async function JourneyPage({ params }: { params: Promise<Params> 
           <a href={journey.deployUrl} className="text-primary hover:underline" rel="noreferrer">
             {journey.deployUrl.replace(/^https?:\/\//, "")}
           </a>
-          {data.source === "demo" ? <span className="text-muted-foreground"> · demo URL</span> : null}
+          {data.source === "demo" ? <span className="text-muted-foreground"> · sample URL</span> : null}
+        </p>
+      ) : null}
+      {didRollback(journey) ? (
+        <p className="mt-6 rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm leading-relaxed">
+          Rolled back. Production traffic is on the previous revision, and the issue is open again with the evidence.
         </p>
       ) : null}
       <JourneyConsole stages={journey.stages} />

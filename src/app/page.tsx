@@ -2,13 +2,14 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { CountUp } from "@/components/count-up";
 import { HowItWorks } from "@/components/how-it-works";
+import { OvernightPath } from "@/components/overnight-path";
 import { PipelineVisual } from "@/components/pipeline-visual";
 import { STAGE_ICON } from "@/components/stage-icons";
-import { PRODUCT_NAME } from "@/config/brand";
+import { OVERNIGHT_HEADLINE, PRODUCT_NAME } from "@/config/brand";
 import { getAppData } from "@/lib/data";
 import { formatDuration, touchLabel } from "@/lib/format";
 import { STAGE_BLURB, STAGE_LABEL } from "@/lib/data/stages";
-import { flagshipJourney, leadTimeMinutes } from "@/lib/data/metrics";
+import { didRollback, flagshipJourney, leadTimeMinutes } from "@/lib/data/metrics";
 import { STAGE_IDS } from "@/lib/data/types";
 
 export default async function HomePage() {
@@ -16,20 +17,24 @@ export default async function HomePage() {
   if (data.source === "error") return null;
   const flagship = flagshipJourney(data.journeys);
   const flagshipLead = flagship ? leadTimeMinutes(flagship) : null;
+  const rolledBack = data.journeys.find((journey) => didRollback(journey));
   const { overview } = data;
 
   return (
     <div>
       <section className="hero-atmosphere">
         <div className="mx-auto max-w-6xl px-4 pt-16 pb-8 sm:px-6 sm:pt-24">
-          <p className="text-xs tracking-[0.22em] text-primary uppercase">Hands-off DevSecOps</p>
-          <h1 className="mt-5 max-w-4xl text-5xl font-medium tracking-[-0.045em] text-balance sm:text-7xl sm:leading-[0.95]">
-            Open an issue. Come back to a release.
+          <p className="text-xs tracking-[0.22em] text-primary uppercase">
+            {PRODUCT_NAME} ships {PRODUCT_NAME}
+          </p>
+          <h1 className="mt-5 max-w-4xl text-4xl font-medium tracking-[-0.04em] text-balance sm:text-6xl sm:leading-[0.98]">
+            {OVERNIGHT_HEADLINE}
           </h1>
           <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            {PRODUCT_NAME} is the public face of a single GitLab Duo flow. Label one issue. The agent carries it
-            through all nine stages, deploys it, and drafts the post.
+            One issue on this repository. Nobody was at the keyboard. The flow patched the leak, proved the image was
+            clean, deployed it, and left the morning post written.
           </p>
+          {flagship ? <OvernightPath journey={flagship} /> : null}
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/mission"
@@ -47,7 +52,17 @@ export default async function HomePage() {
           <div className="mt-12">
             <PipelineVisual />
           </div>
-          <p className="mt-4 text-sm text-muted-foreground">Label the issue ship. Then walk away.</p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Label the issue ship. The rollback guard watches the deploy for five minutes after that.
+            {rolledBack ? (
+              <>
+                {" "}
+                <Link href={`/mission/${rolledBack.issueIid}`} className="text-primary hover:underline">
+                  One deploy has already been sent back.
+                </Link>
+              </>
+            ) : null}
+          </p>
         </div>
       </section>
 
@@ -102,13 +117,14 @@ export default async function HomePage() {
         </div>
         <div className="space-y-4 text-base leading-relaxed text-muted-foreground">
           <p>
-            On a 400-star library the person who reviews grants is the person who tags the release, usually late, from
-            a laptop. The changelog is a sentence in a commit. The scan runs when someone remembers. The community
-            hears about it because a link got pasted into Discord.
+            The same person who merges the fix is the person who would have been asleep at 02:14. A pipeline can build
+            an image. It cannot read the finding, open the merge request, and write down what it did. That is the
+            flow.
           </p>
           <p>
-            {PRODUCT_NAME} keeps the public record those communities are missing: what shipped, what the agent did at
-            each stage, and a post that is ready to paste. The humans stay on the work. The loop does the rest.
+            {PRODUCT_NAME} is the public record of that flow on its own repository: the overnight path, the journeys,
+            and the post that was ready before morning. If the new revision degrades, the guard puts the previous one
+            back and reopens the issue.
           </p>
         </div>
       </section>
@@ -135,7 +151,7 @@ export default async function HomePage() {
       {flagship ? (
         <section className="mx-auto grid max-w-6xl gap-6 px-4 pb-20 sm:px-6 lg:grid-cols-2">
           <article className="rounded-3xl border border-border bg-card p-6">
-            <p className="text-xs tracking-[0.16em] text-muted-foreground uppercase">Latest quiet ship</p>
+            <p className="text-xs tracking-[0.16em] text-muted-foreground uppercase">The overnight ship</p>
             <h2 className="mt-3 text-2xl font-medium tracking-tight">{flagship.title}</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{flagship.description}</p>
             <p className="num mt-5 text-sm">
@@ -148,10 +164,10 @@ export default async function HomePage() {
           </article>
           <article className="rounded-3xl border border-border p-6">
             <p className="text-xs tracking-[0.16em] text-muted-foreground uppercase">What the community sees</p>
-            <h2 className="mt-3 text-2xl font-medium tracking-tight">A changelog, and the post already drafted.</h2>
+            <h2 className="mt-3 text-2xl font-medium tracking-tight">The morning post, already drafted.</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Each release keeps notes for X, Discord, and Telegram, with a copy button and an RSS feed. No one has to
-              write the announcement after the deploy.
+              The release keeps notes for X, Discord, and Telegram. Copy them when you wake up. The flow does not post
+              them for you.
             </p>
             <Link href="/releases" className="mt-5 inline-flex text-sm text-primary hover:underline">
               Open the release hub

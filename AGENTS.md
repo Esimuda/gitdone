@@ -16,8 +16,9 @@ GitDone is a Next.js App Router app. It is the release hub and mission control f
 
 - TypeScript, strict. Product name: `PRODUCT_NAME` in `src/config/brand.ts`. Do not hardcode the name anywhere else.
 - Logo geometry lives only in `src/brand/mark.ts` and is drawn only in `src/components/logo.tsx`. `app/icon.svg` is generated from that geometry. Do not add a second mark.
-- Data loading lives in `src/lib/data/`. Demo data and the GitLab client share one `AppData` shape. Do not fetch GitLab from client components.
-- Journey notes follow `docs/journey-schema.md`. Newest valid `<!-- journey:v1 -->` note wins.
+- Data loading lives in `src/lib/data/`. Sample data and the GitLab client share one `AppData` shape. GitLab is primary when `GITLAB_TOKEN` and `GITLAB_PROJECT_ID` are both set. Do not fetch GitLab from client components.
+- Sample journeys are this repository shipping itself, and the UI marks them Sample data.
+- Journey notes follow `docs/journey-schema.md`. Newest valid `<!-- journey:v1 -->` note wins. `rollback` is optional and sits after `monitor`.
 - Do not log tokens, emails, or secrets. GitLab calls use `Authorization: Bearer`.
 - Happy-path automation does not add a human approval gate. A single clarifying question is allowed only when the issue cannot be planned.
 

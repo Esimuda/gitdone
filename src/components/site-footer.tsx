@@ -27,11 +27,6 @@ export function SiteFooter() {
                 Releases
               </Link>
             </li>
-            <li>
-              <a href="/feed.xml" className="hover:text-primary">
-                RSS
-              </a>
-            </li>
           </ul>
         </div>
         <div>
@@ -39,6 +34,7 @@ export function SiteFooter() {
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             {STAGE_IDS.map((id) => STAGE_LABEL[id]).join(" · ")}
           </p>
+          <p className="mt-2 text-sm text-muted-foreground">Rollback sits after Monitor when a deploy degrades.</p>
         </div>
       </div>
       <div className="border-t border-border">

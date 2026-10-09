@@ -9,7 +9,7 @@ const STEPS = [
   {
     icon: GitBranch,
     title: "One agent crosses nine stages",
-    body: "Plan through govern, in order. It writes the code, the tests, the scan, the release, and the deploy.",
+    body: "Plan through govern, in order. After the deploy it watches health and error rate, and sends traffic back if they degrade.",
   },
   {
     icon: Megaphone,

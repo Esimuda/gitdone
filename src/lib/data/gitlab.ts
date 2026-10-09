@@ -76,11 +76,17 @@ export function buildGitlabUrl(baseUrl: string, projectId: string, path: string)
   return `${root}/api/v4/projects/${encodeURIComponent(projectId)}${suffix}`;
 }
 
-function labelNames(labels: GitlabIssue["labels"]): string[] {
+export function labelNames(labels: GitlabIssue["labels"]): string[] {
   if (!labels) return [];
   return labels
     .map((label) => (typeof label === "string" ? label : label.title ?? ""))
     .filter(Boolean);
+}
+
+/** Ship-labelled issues are the flow's work. If none are labelled yet, keep the page honest and show what GitLab returned. */
+export function issuesForJourneys(issues: GitlabIssue[]): GitlabIssue[] {
+  const labelled = issues.filter((issue) => labelNames(issue.labels).some((label) => label.toLowerCase() === "ship"));
+  return labelled.length > 0 ? labelled : issues;
 }
 
 function authorName(user: GitlabUser | undefined): string {
@@ -283,13 +289,15 @@ export async function loadGitlabAppData(
   config: GitlabConfig,
   fetchImpl: typeof fetch = fetch,
 ): Promise<AppData> {
-  const [project, issues, mergeRequests, releases, pipelines] = await Promise.all([
+  const [project, allIssues, mergeRequests, releases, pipelines] = await Promise.all([
     gitlabGet<GitlabProject>(config, "", fetchImpl),
     gitlabGet<GitlabIssue[]>(config, "/issues?state=all&per_page=20&order_by=updated_at", fetchImpl),
     gitlabGet<GitlabMergeRequest[]>(config, "/merge_requests?state=all&per_page=50", fetchImpl),
     gitlabGet<GitlabRelease[]>(config, "/releases?per_page=20", fetchImpl),
     gitlabGet<GitlabPipeline[]>(config, "/pipelines?per_page=20", fetchImpl),
   ]);
+
+  const issues = issuesForJourneys(allIssues);
 
   const notesList = await Promise.all(
     issues.map(async (issue) => {

@@ -8,5 +8,8 @@ export const PRODUCT_NAME = "GitDone";
 export const PRODUCT_TAGLINE =
   "One labelled issue, across every DevSecOps stage, into production.";
 
+export const OVERNIGHT_HEADLINE =
+  "A security finding at 2 AM, patched, checked, deployed and announced by morning.";
+
 export const PRODUCT_DESCRIPTION =
   "A public release hub and mission-control view for communities that ship with a single GitLab Duo flow and no DevOps staff.";

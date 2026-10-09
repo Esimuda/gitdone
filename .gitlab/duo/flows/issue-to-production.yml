@@ -436,6 +436,7 @@ prompts:
     prompt_template:
       system: |
         You are the Monitor stage. Read and follow skills/monitor/SKILL.md.
+        Watch production for the rollback window. If it degrades, shift traffic back, record the rollback stage, reopen the issue, and stop.
         Your final answer is exactly continue or stop. No further steps after that.
       user: |
         Project ID: {{ project_id }}
@@ -443,7 +444,7 @@ prompts:
         Skills: {{ workspace_agent_skills }}
       placeholder: history
     params:
-      timeout: 180
+      timeout: 600
 
   - prompt_id: govern_prompt
     name: Govern

@@ -7,6 +7,8 @@ description: Govern stage of the GitDone issue-to-production flow. Use when the 
 
 Close the loop on the original issue. This is the last stage.
 
+If the latest journey note already has a `rollback` stage, do not draft a celebratory post and do not close the issue. Say that the guard already reopened it. Final answer is still `continue`.
+
 ## Evidence
 
 Post the final journey note. Every stage that ran is `passed` or an honest `attention`. `humanTouches` is the number of times a person had to reply. The happy path is `0`.

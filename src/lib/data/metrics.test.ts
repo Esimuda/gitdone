@@ -4,6 +4,7 @@ import { formatDuration } from "../format";
 import {
   computeOverview,
   coveredStages,
+  didRollback,
   flagshipJourney,
   isShipped,
   leadTimeMinutes,
@@ -15,48 +16,67 @@ import type { Journey } from "./types";
 describe("demo overview", () => {
   const data = buildDemoData();
 
-  it("covers all nine stages and the seeded headline numbers", () => {
-    expect(data.journeys).toHaveLength(6);
+  it("covers all nine stages and the sample headline numbers", () => {
+    expect(data.project.name).toBe("GitDone");
+    expect(data.journeys).toHaveLength(5);
     expect(data.overview).toMatchObject({
-      leadTimeMinutes: 77,
+      leadTimeMinutes: 71,
       leadTimeSample: 4,
       humanInterventions: 1,
-      humanSample: 6,
+      humanSample: 5,
       stageCoverage: 9,
       stageCount: 9,
-      findingsResolved: 5,
+      findingsResolved: 1,
       findingsOpen: 1,
       shipped: 4,
-      inFlight: 2,
-      zeroTouchShips: 3,
+      inFlight: 1,
+      zeroTouchShips: 2,
       shipsWithTouchData: 4,
+      rollbacks: 1,
     });
     expect(coveredStages(data.journeys)).toHaveLength(9);
-    expect(formatDuration(data.overview.leadTimeMinutes ?? 0)).toBe("1 h 17 min");
+    expect(formatDuration(data.overview.leadTimeMinutes ?? 0)).toBe("1 h 11 min");
   });
 
-  it("puts the live issue first and treats the latest zero-touch ship as the flagship", () => {
-    expect(data.journeys[0]?.issueIid).toBe(148);
-    expect(spotlightJourney(data.journeys)?.issueIid).toBe(148);
+  it("puts the live issue first and treats the overnight ship as the flagship", () => {
+    expect(data.journeys[0]?.issueIid).toBe(221);
+    expect(spotlightJourney(data.journeys)?.issueIid).toBe(221);
     const flagship = flagshipJourney(data.journeys);
-    expect(flagship?.issueIid).toBe(142);
-    expect(leadTimeMinutes(flagship!)).toBe(47);
+    expect(flagship?.issueIid).toBe(214);
+    expect(leadTimeMinutes(flagship!)).toBe(52);
     expect(isShipped(flagship!)).toBe(true);
+    expect(didRollback(flagship!)).toBe(false);
+    const rolled = data.journeys.find((journey) => journey.issueIid === 207);
+    expect(didRollback(rolled!)).toBe(true);
+    expect(rolled?.stages.map((stage) => stage.stage)).toEqual([
+      "plan",
+      "create",
+      "verify",
+      "package",
+      "secure",
+      "release",
+      "configure",
+      "monitor",
+      "rollback",
+      "govern",
+    ]);
   });
 
-  it("gives every journey nine stages in order", () => {
+  it("gives every quiet journey nine stages in order", () => {
+    const nine = [
+      "plan",
+      "create",
+      "verify",
+      "package",
+      "secure",
+      "release",
+      "configure",
+      "monitor",
+      "govern",
+    ];
     for (const journey of data.journeys) {
-      expect(journey.stages.map((stage) => stage.stage)).toEqual([
-        "plan",
-        "create",
-        "verify",
-        "package",
-        "secure",
-        "release",
-        "configure",
-        "monitor",
-        "govern",
-      ]);
+      if (didRollback(journey)) continue;
+      expect(journey.stages.map((stage) => stage.stage)).toEqual(nine);
     }
   });
 });

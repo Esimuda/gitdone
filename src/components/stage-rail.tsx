@@ -27,7 +27,7 @@ export function StageRail({ stages, compact = false }: { stages: StageRecord[]; 
           animate={{ scaleX: progress }}
           transition={{ duration: reduce ? 0 : 1.15, ease: [0.22, 1, 0.36, 1] }}
         />
-        <ol className="relative grid grid-cols-3 gap-y-4 sm:grid-cols-9">
+        <ol className={`relative grid grid-cols-3 gap-y-4 ${stages.length > 9 ? "sm:grid-cols-10" : "sm:grid-cols-9"}`}>
           {stages.map((stage, index) => {
             const label = STAGE_LABEL[stage.stage];
             const on = stage.status === "passed" || stage.status === "running" || stage.status === "attention";
@@ -37,11 +37,13 @@ export function StageRail({ stages, compact = false }: { stages: StageRecord[]; 
                   className={`relative z-10 size-6 rounded-full border ${
                     stage.status === "running"
                       ? "border-accent bg-accent shadow-[0_0_0_6px_color-mix(in_oklab,var(--accent)_25%,transparent)] motion-safe:animate-pulse"
-                      : stage.status === "attention"
+                      : stage.stage === "rollback" && stage.status !== "pending"
                         ? "border-danger bg-danger"
-                        : stage.status === "passed"
-                          ? "border-primary bg-primary"
-                          : "border-border bg-card"
+                        : stage.status === "attention"
+                          ? "border-danger bg-danger"
+                          : stage.status === "passed"
+                            ? "border-primary bg-primary"
+                            : "border-border bg-card"
                   }`}
                   aria-hidden
                 />

@@ -15,12 +15,16 @@
 #   CLOUD_RUN_SERVICE_PRODUCTION
 #   STAGING_SERVICE_URL     https URL of the staging Cloud Run service
 #   PRODUCTION_SERVICE_URL  https URL of the production Cloud Run service
+#   ROLLBACK_WINDOW_MINUTES   optional, default 5
+#   ROLLBACK_MAX_ERROR_RATE   optional, default 0.02
+#   ROLLBACK_ISSUE_IID        optional, the ship issue to reopen if the guard fires
 #
 # Authentication to Google is Workload Identity Federation, not a JSON key.
 # Configure it in the GitLab project (Settings > Integrations > Google Cloud)
 # so jobs receive short-lived credentials. The Cloud Run component expects that
 # integration. Grant the workload identity roles/run.admin and
 # roles/iam.serviceAccountUser, plus Artifact Registry writer for the copy.
+# The rollback guard also needs roles/monitoring.viewer to read request counts.
 # Docs: https://docs.gitlab.com/ci/cloud_services/google_cloud/
 #       https://docs.gitlab.com/tutorials/create_and_deploy_web_service_with_google_cloud_run_component/
 
@@ -32,6 +36,7 @@ stages:
   - deploy-staging
   - verify
   - deploy-production
+  - monitor
   - release
 
 workflow:
@@ -147,6 +152,24 @@ smoke:staging:
         exit 1
       fi
     - curl --fail --show-error --retry 8 --retry-delay 5 --retry-all-errors "$STAGING_SERVICE_URL/api/health"
+
+# After production deploy, watch health and the 5xx rate, then shift traffic back
+# if either degrades. identity: google_cloud is the Workload Identity hook for a
+# custom job. Whether this GitLab version accepts it is unverified; the Cloud Run
+# component authenticates separately. needs assumes the component job name from `as`.
+rollback-guard:
+  extends: .default-branch
+  stage: monitor
+  image: google/cloud-sdk:slim
+  identity: google_cloud
+  timeout: 15m
+  needs:
+    - job: deploy-production
+  variables:
+    ROLLBACK_WINDOW_MINUTES: "5"
+    ROLLBACK_MAX_ERROR_RATE: "0.02"
+  script:
+    - bash scripts/rollback-guard.sh
 
 # Releases of this repository when a maintainer pushes a tag.
 # The Duo flow publishes product releases from issues. This job is separate.
