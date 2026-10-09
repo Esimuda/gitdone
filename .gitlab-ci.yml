@@ -18,6 +18,11 @@
 #   ROLLBACK_WINDOW_MINUTES   optional, default 5
 #   ROLLBACK_MAX_ERROR_RATE   optional, default 0.02
 #   ROLLBACK_ISSUE_IID        optional, the ship issue to reopen if the guard fires
+#   GCP_DEPLOY              set to "true" once Google Cloud is connected. Until
+#                           then the Google components are not included and the
+#                           publish, deploy, smoke and rollback jobs are skipped,
+#                           so lint, test, build, SAST and secret detection
+#                           still run green.
 #
 # Authentication to Google is Workload Identity Federation, not a JSON key.
 # Configure it in the GitLab project (Settings > Integrations > Google Cloud)
@@ -62,6 +67,10 @@ variables:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
+.gcp-deploy:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $GCP_DEPLOY == "true"
+
 .node:
   image: node:22-bookworm
   cache:
@@ -104,12 +113,22 @@ e2e:
 include:
   - template: Jobs/SAST.gitlab-ci.yml
   - template: Jobs/Secret-Detection.gitlab-ci.yml
+  # Smoke and rollback jobs use identity: google_cloud, which GitLab rejects
+  # while the Google Cloud IAM integration is off, so they live in their own
+  # file and are only included once GCP_DEPLOY is "true".
+  - local: ci/gcp-deploy.gitlab-ci.yml
+    rules:
+      - if: $GCP_DEPLOY == "true"
   - component: gitlab.com/google-gitlab-components/artifact-registry/upload-artifact-registry@0.1.0
+    rules:
+      - if: $GCP_DEPLOY == "true"
     inputs:
       stage: publish
       source: $CI_REGISTRY_IMAGE:$IMAGE_TAG
       target: $AR_IMAGE:$IMAGE_TAG
   - component: gitlab.com/google-gitlab-components/cloud-run/deploy-cloud-run@0.1.0
+    rules:
+      - if: $GCP_DEPLOY == "true"
     inputs:
       stage: deploy-staging
       as: deploy-staging
@@ -118,6 +137,8 @@ include:
       region: $GCP_REGION
       service: $CLOUD_RUN_SERVICE_STAGING
   - component: gitlab.com/google-gitlab-components/cloud-run/deploy-cloud-run@0.1.0
+    rules:
+      - if: $GCP_DEPLOY == "true"
     inputs:
       stage: deploy-production
       as: deploy-production
@@ -138,38 +159,6 @@ package:
     - docker build -t "$CI_REGISTRY_IMAGE:$IMAGE_TAG" -t "$CI_REGISTRY_IMAGE:latest" .
     - docker push "$CI_REGISTRY_IMAGE:$IMAGE_TAG"
     - docker push "$CI_REGISTRY_IMAGE:latest"
-
-# Post-deploy smoke. STAGING_SERVICE_URL is a placeholder variable.
-# The Cloud Run component does not document a stable URL output in the tutorial.
-smoke:staging:
-  extends: .default-branch
-  stage: verify
-  image: curlimages/curl:8.11.1
-  script:
-    - |
-      if [ -z "$STAGING_SERVICE_URL" ]; then
-        echo "Set STAGING_SERVICE_URL to the staging Cloud Run URL (https://...)."
-        exit 1
-      fi
-    - curl --fail --show-error --retry 8 --retry-delay 5 --retry-all-errors "$STAGING_SERVICE_URL/api/health"
-
-# After production deploy, watch health and the 5xx rate, then shift traffic back
-# if either degrades. identity: google_cloud is the Workload Identity hook for a
-# custom job. Whether this GitLab version accepts it is unverified; the Cloud Run
-# component authenticates separately. needs assumes the component job name from `as`.
-rollback-guard:
-  extends: .default-branch
-  stage: monitor
-  image: google/cloud-sdk:slim
-  identity: google_cloud
-  timeout: 15m
-  needs:
-    - job: deploy-production
-  variables:
-    ROLLBACK_WINDOW_MINUTES: "5"
-    ROLLBACK_MAX_ERROR_RATE: "0.02"
-  script:
-    - bash scripts/rollback-guard.sh
 
 # Releases of this repository when a maintainer pushes a tag.
 # The Duo flow publishes product releases from issues. This job is separate.

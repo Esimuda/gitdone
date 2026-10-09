@@ -1,0 +1,34 @@
+# Included from .gitlab-ci.yml only when GCP_DEPLOY is "true".
+
+# Post-deploy smoke. STAGING_SERVICE_URL is a placeholder variable.
+# The Cloud Run component does not document a stable URL output in the tutorial.
+smoke:staging:
+  extends: .gcp-deploy
+  stage: verify
+  image: curlimages/curl:8.11.1
+  script:
+    - |
+      if [ -z "$STAGING_SERVICE_URL" ]; then
+        echo "Set STAGING_SERVICE_URL to the staging Cloud Run URL (https://...)."
+        exit 1
+      fi
+    - curl --fail --show-error --retry 8 --retry-delay 5 --retry-all-errors "$STAGING_SERVICE_URL/api/health"
+
+# After production deploy, watch health and the 5xx rate, then shift traffic back
+# if either degrades. identity: google_cloud is the Workload Identity hook for a
+# custom job. Whether this GitLab version accepts it is unverified; the Cloud Run
+# component authenticates separately. needs assumes the component job name from `as`.
+rollback-guard:
+  extends: .gcp-deploy
+  stage: monitor
+  image: google/cloud-sdk:slim
+  identity: google_cloud
+  timeout: 15m
+  needs:
+    - job: deploy-production
+      optional: true
+  variables:
+    ROLLBACK_WINDOW_MINUTES: "5"
+    ROLLBACK_MAX_ERROR_RATE: "0.02"
+  script:
+    - bash scripts/rollback-guard.sh

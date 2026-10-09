@@ -9,9 +9,10 @@ export default defineConfig({
   retries: 0,
   use: {
     baseURL,
-    channel: "chrome",
-    permissions: ["clipboard-read", "clipboard-write"],
+    // The CI image ships Playwright Chromium, not branded Chrome.
+    channel: process.env.CI ? undefined : "chrome",
     ...devices["Desktop Chrome"],
+    permissions: ["clipboard-read", "clipboard-write"],
   },
   webServer: {
     command: `npx next start -p ${port}`,
