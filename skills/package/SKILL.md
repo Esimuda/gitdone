@@ -9,9 +9,13 @@ Record the container image GitLab CI built for this change. The image is produce
 
 ## Find the image
 
-With `gitlab_api_get`, read the pipeline for the merge request branch. Note the image tag. The CI file tags `$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA`.
+The `package` job runs on merge request pipelines and on `main`. It tags `$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA` and logs a line `gitdone-package image=...`.
 
-If the package job has not finished, wait by reading the pipeline again, then record `running` if it is still going. If it failed, read the job trace if the API allows it and fix the Dockerfile or build only when the failure is in this change. Whether job-trace endpoints are inside the `ai_workflows` token scope was not verified. If the API refuses, say so in the stage summary and final answer `stop`.
+With `gitlab_api_get`, read the latest merge request pipeline (`/projects/:id/merge_requests/:iid/pipelines`), then its jobs (`/projects/:id/pipelines/:pipeline_id/jobs`). Find the `package` job. The image is `registry.gitlab.com/<project path>:<the pipeline sha>`.
+
+Do not call the Container Registry API. The flow token is refused there (403 insufficient_scope), and the job status is the evidence.
+
+If the package job is still running, read the pipeline again until it finishes. If it failed, read the job trace (`/projects/:id/jobs/:job_id/trace`) and fix the Dockerfile or build only when the failure is in this change. If the API refuses, say so in the stage summary and final answer `stop`.
 
 ## Record
 

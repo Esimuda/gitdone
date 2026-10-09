@@ -17,7 +17,7 @@ Branch from the primary branch named in the prompt. Branch name: `<iid>-short-sl
 
 Documented tools: `create_branch`, `create_commit`, `create_merge_request`, `create_file_with_contents`, `edit_file`, `read_file`, `list_dir`, `grep`, `find_files`, `run_command`.
 
-The merge request description must contain `Closes #<iid>` and a short note of what changed. Do not merge in this stage.
+The merge request description must contain `Closes #<iid>` and the changelog for this change under one or more of `## Added`, `## Fixed`, `## Changed`, or `## Security`, with bullet lines. The pipeline publishes that description as the release notes after merge. Do not merge in this stage.
 
 ## Record
 
