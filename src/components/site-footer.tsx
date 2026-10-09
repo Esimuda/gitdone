@@ -27,6 +27,11 @@ export function SiteFooter() {
                 Releases
               </Link>
             </li>
+            <li>
+              <Link href="/connect" className="hover:text-primary">
+                Connect a project
+              </Link>
+            </li>
           </ul>
         </div>
         <div>

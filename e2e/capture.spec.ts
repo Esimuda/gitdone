@@ -30,7 +30,7 @@ async function tour(page: import("@playwright/test").Page) {
 }
 
 test("capture desktop and mobile", async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
 
   await page.goto("/");
@@ -52,9 +52,18 @@ test("capture desktop and mobile", async ({ page }) => {
   await page.screenshot({ path: `${outDir}/mission-desktop.png`, fullPage: true });
 
   await page.goto("/mission/214");
-  await expect(page.getByRole("heading", { name: "Govern" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Approval" })).toBeVisible();
+  await expect(page.getByText("The one human touch")).toBeVisible();
+  await expect(page.getByText(/Olabowale Babalola merged/).first()).toBeVisible();
   await settle(page, 1500);
+  await page.screenshot({ path: `${artifactDir}/approval.png`, fullPage: true });
   await page.screenshot({ path: `${outDir}/journey-desktop.png`, fullPage: true });
+
+  await page.goto("/connect");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Connect your GitLab project in two minutes");
+  await expect(page.getByText("approve with one click").first()).toBeVisible();
+  await settle(page, 800);
+  await page.screenshot({ path: `${artifactDir}/connect.png`, fullPage: true });
 
   await page.goto("/mission/207");
   await expect(page.getByRole("heading", { name: "Rollback" })).toBeVisible();

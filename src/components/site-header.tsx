@@ -12,10 +12,20 @@ import type { AppData } from "@/lib/data/types";
 const LINKS = [
   { href: "/mission", label: "Mission" },
   { href: "/releases", label: "Releases" },
+  { href: "/connect", label: "Connect" },
 ];
 
-export function SiteHeader({ source }: { source?: AppData["source"] }) {
+export type HeaderProject = { id: number; name: string; path: string };
+
+export function SiteHeader({
+  source,
+  projects = [],
+}: {
+  source?: AppData["source"];
+  projects?: HeaderProject[];
+}) {
   const pathname = usePathname();
+  const badge = pathname.startsWith("/w/") ? "connected" : source;
   const [open, setOpen] = useState(false);
 
   return (
@@ -26,7 +36,7 @@ export function SiteHeader({ source }: { source?: AppData["source"] }) {
             <LogoMark className="size-8" />
             <Wordmark className="text-base" />
           </Link>
-          {source ? <SourceBadge source={source} /> : null}
+          {badge ? <SourceBadge source={badge} /> : null}
         </div>
         <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
           {LINKS.map((link) => {
@@ -42,6 +52,21 @@ export function SiteHeader({ source }: { source?: AppData["source"] }) {
               </Link>
             );
           })}
+          {projects.length > 0 ? (
+            <details className="relative">
+              <summary className="cursor-pointer list-none rounded-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground">
+                Projects
+              </summary>
+              <div className="absolute right-0 z-20 mt-2 w-64 rounded-2xl border border-border bg-card p-2 shadow-xl">
+                {projects.map((project) => (
+                  <Link key={project.id} href={`/w/${project.id}`} className="block rounded-xl px-3 py-2 text-sm hover:bg-muted">
+                    <span className="block font-medium">{project.name}</span>
+                    <span className="block text-xs text-muted-foreground">{project.path}</span>
+                  </Link>
+                ))}
+              </div>
+            </details>
+          ) : null}
         </nav>
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -67,6 +92,16 @@ export function SiteHeader({ source }: { source?: AppData["source"] }) {
               onClick={() => setOpen(false)}
             >
               {link.label}
+            </Link>
+          ))}
+          {projects.map((project) => (
+            <Link
+              key={project.id}
+              href={`/w/${project.id}`}
+              className="block rounded-xl px-3 py-3 text-base"
+              onClick={() => setOpen(false)}
+            >
+              {project.name}
             </Link>
           ))}
         </nav>

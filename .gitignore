@@ -35,6 +35,11 @@ yarn-error.log*
 .env.*
 !.env.example
 
+# local connect store and release job outputs
+.data/
+release-notes.md
+release.env
+
 # tests and local tooling
 /test-results/
 /playwright-report/

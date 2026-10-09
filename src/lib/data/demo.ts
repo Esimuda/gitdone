@@ -82,8 +82,8 @@ const journeys: Journey[] = [
     createdAt: "2026-10-08T02:14:00.000Z",
     closedAt: "2026-10-08T03:12:00.000Z",
     state: "closed",
-    humanTouches: 0,
-    touchNotes: [],
+    humanTouches: 1,
+    touchNotes: ["Olabowale Babalola merged MR !46 at 03:00 UTC. That was the only click."],
     releaseTag: "v0.9.0",
     deployUrl: DEPLOY_URL,
     stages: [
@@ -115,13 +115,22 @@ const journeys: Journey[] = [
       }),
       stage("secure", "passed", "The leaked-token finding is resolved. Secret detection on the new image is clean.", {
         startedAt: "2026-10-08T02:54:00.000Z",
-        completedAt: "2026-10-08T02:59:00.000Z",
+        completedAt: "2026-10-08T02:58:00.000Z",
         security: { found: 1, resolved: 1 },
         details: ["The old layer is not in the new digest. The job log was scanned for the token prefix."],
         artifacts: [{ label: "Secret detection", href: `${PROJECT_WEB}/-/pipelines/5188/security` }],
       }),
+      stage("approval", "passed", "Olabowale Babalola merged MR !46 at 03:00 UTC.", {
+        startedAt: "2026-10-08T02:58:00.000Z",
+        completedAt: "2026-10-08T03:00:00.000Z",
+        details: [
+          "The agents posted Ready to merge and stopped.",
+          "One click. Nobody else touched the change.",
+        ],
+        artifacts: [{ label: "MR !46", href: `${PROJECT_WEB}/-/merge_requests/46` }],
+      }),
       stage("release", "passed", "Published GitLab Release v0.9.0 with the security note and a link to MR !46.", {
-        startedAt: "2026-10-08T02:59:00.000Z",
+        startedAt: "2026-10-08T03:00:00.000Z",
         completedAt: "2026-10-08T03:02:00.000Z",
         artifacts: [{ label: "Release v0.9.0", href: `${PROJECT_WEB}/-/releases/v0.9.0` }],
       }),
@@ -138,7 +147,7 @@ const journeys: Journey[] = [
       stage(
         "govern",
         "passed",
-        "Wrote the journey record and the morning posts for X, Discord, and Telegram. Human touches: 0.",
+        "Wrote the journey record and the morning posts for X, Discord, and Telegram. Human touches: 1, the merge click.",
         {
           startedAt: "2026-10-08T03:11:00.000Z",
           completedAt: "2026-10-08T03:12:00.000Z",
@@ -392,7 +401,7 @@ const releases: ReleaseEntry[] = [
       { kind: "changed", text: "The token is read from a CI variable at job time only" },
     ],
     issueIid: 214,
-    humanTouches: 0,
+    humanTouches: 1,
   }),
   release({
     tag: "v0.8.2",

@@ -5,9 +5,13 @@
 # Not executed here. Catalog limit is 40 KiB. Do not add top-level name,
 # description, or product_group. Do not set prompt model. environment must be ambient.
 #
+# Supervised. The flow stops when the merge request is ready.
+# GitLab blocks AI workflows from merging and from creating releases.
+# A person clicks Merge. The pipeline on the default branch publishes the
+# release, deploys when GCP_DEPLOY is true, and records the approval.
+#
 # Trigger, attached in the UI (AI > Flows > Enable, or AI > Triggers):
-#   Event: Work item. Action: Created.
-#   Optional second condition: Mention, so a person can re-run with a comment.
+#   Work item created, mention, and assign.
 #   A flow cannot start another flow. This file is the whole chain.
 #   Service account is created when the flow is enabled. Composite identity applies.
 #
@@ -156,90 +160,21 @@ components:
       - on_tool_execution_success
       - on_tool_execution_failed
 
-  - name: release
+  - name: ready
     type: AgentComponent
-    prompt_id: release_prompt
+    prompt_id: ready_prompt
     inputs:
       - from: context:goal
         as: goal
       - from: context:project_id
         as: project_id
-      - from: context:inputs.agent_platform_standard_context.primary_branch
-        as: primary_branch
       - from: context:inputs.workspace_agent_skills
         as: workspace_agent_skills
         optional: true
     toolset:
       - gitlab_api_get
       - get_merge_request
-      - get_project
       - create_issue_note
-      - read_file
-      - run_command
-    ui_log_events:
-      - on_agent_final_answer
-      - on_tool_execution_success
-      - on_tool_execution_failed
-
-  - name: configure
-    type: AgentComponent
-    prompt_id: configure_prompt
-    inputs:
-      - from: context:goal
-        as: goal
-      - from: context:project_id
-        as: project_id
-      - from: context:inputs.workspace_agent_skills
-        as: workspace_agent_skills
-        optional: true
-    toolset:
-      - gitlab_api_get
-      - create_issue_note
-      - read_file
-    ui_log_events:
-      - on_agent_final_answer
-      - on_tool_execution_success
-      - on_tool_execution_failed
-
-  - name: monitor
-    type: AgentComponent
-    prompt_id: monitor_prompt
-    inputs:
-      - from: context:goal
-        as: goal
-      - from: context:project_id
-        as: project_id
-      - from: context:inputs.workspace_agent_skills
-        as: workspace_agent_skills
-        optional: true
-    toolset:
-      - gitlab_api_get
-      - create_issue_note
-      - run_command
-    ui_log_events:
-      - on_agent_final_answer
-      - on_tool_execution_success
-      - on_tool_execution_failed
-
-  - name: govern
-    type: AgentComponent
-    prompt_id: govern_prompt
-    inputs:
-      - from: context:goal
-        as: goal
-      - from: context:project_id
-        as: project_id
-      - from: context:inputs.user_rule
-        as: agents_dot_md
-        optional: true
-      - from: context:inputs.workspace_agent_skills
-        as: workspace_agent_skills
-        optional: true
-    toolset:
-      - gitlab_api_get
-      - get_issue
-      - create_issue_note
-      - read_file
       - run_command
     ui_log_events:
       - on_agent_final_answer
@@ -277,26 +212,8 @@ routers:
       input: context:secure.final_answer
       routes:
         stop: end
-        default_route: release
-  - from: release
-    condition:
-      input: context:release.final_answer
-      routes:
-        stop: end
-        default_route: configure
-  - from: configure
-    condition:
-      input: context:configure.final_answer
-      routes:
-        stop: end
-        default_route: monitor
-  - from: monitor
-    condition:
-      input: context:monitor.final_answer
-      routes:
-        stop: end
-        default_route: govern
-  - from: govern
+        default_route: ready
+  - from: ready
     to: end
 
 flow:
@@ -320,9 +237,10 @@ prompts:
     unit_primitives: []
     prompt_template:
       system: |
-        You are the Plan stage of a hands-off issue-to-production flow.
+        You are the Plan stage of a supervised issue-to-production flow.
         Read and follow skills/plan/SKILL.md before you act.
-        Do not wait for approval. Your final answer is exactly skip, stop, or continue.
+        Do not wait for approval. The only human step is the merge, and it happens after you stop.
+        Your final answer is exactly skip, stop, or continue.
         No further steps after that.
       user: |
         Project ID: {{ project_id }}
@@ -390,6 +308,7 @@ prompts:
       system: |
         You are the Secure stage. Read and follow skills/secure/SKILL.md.
         Fix findings yourself. Do not ask a person to approve a patch.
+        Always post the journey note before you finish, including when there are no findings.
         Your final answer is exactly continue or stop. No further steps after that.
       user: |
         Project ID: {{ project_id }}
@@ -399,65 +318,18 @@ prompts:
     params:
       timeout: 240
 
-  - prompt_id: release_prompt
-    name: Release
+  - prompt_id: ready_prompt
+    name: Ready to merge
     unit_primitives: []
     prompt_template:
       system: |
-        You are the Release stage. Read and follow skills/release/SKILL.md.
-        Your final answer is exactly continue or stop. No further steps after that.
-      user: |
-        Project ID: {{ project_id }}
-        Primary branch: {{ primary_branch }}
-        Goal: {{ goal }}
-        Skills: {{ workspace_agent_skills }}
-      placeholder: history
-    params:
-      timeout: 180
-
-  - prompt_id: configure_prompt
-    name: Configure
-    unit_primitives: []
-    prompt_template:
-      system: |
-        You are the Configure stage. Read and follow skills/configure/SKILL.md.
-        Your final answer is exactly continue or stop. No further steps after that.
-      user: |
-        Project ID: {{ project_id }}
-        Goal: {{ goal }}
-        Skills: {{ workspace_agent_skills }}
-      placeholder: history
-    params:
-      timeout: 180
-
-  - prompt_id: monitor_prompt
-    name: Monitor
-    unit_primitives: []
-    prompt_template:
-      system: |
-        You are the Monitor stage. Read and follow skills/monitor/SKILL.md.
-        Watch production for the rollback window. If it degrades, shift traffic back, record the rollback stage, reopen the issue, and stop.
-        Your final answer is exactly continue or stop. No further steps after that.
-      user: |
-        Project ID: {{ project_id }}
-        Goal: {{ goal }}
-        Skills: {{ workspace_agent_skills }}
-      placeholder: history
-    params:
-      timeout: 600
-
-  - prompt_id: govern_prompt
-    name: Govern
-    unit_primitives: []
-    prompt_template:
-      system: |
-        You are the Govern stage. Read and follow skills/govern/SKILL.md.
-        Write the final journey note. Your final answer is exactly continue.
+        You are the last stage. Read and follow skills/ready/SKILL.md.
+        Post Ready to merge on the issue and the merge request, then stop.
+        Do not merge. Do not create a release. Your final answer is exactly stop.
         No further steps after that.
       user: |
         Project ID: {{ project_id }}
         Goal: {{ goal }}
-        Repository instructions: {{ agents_dot_md }}
         Skills: {{ workspace_agent_skills }}
       placeholder: history
     params:

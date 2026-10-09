@@ -8,13 +8,13 @@ const STEPS = [
   },
   {
     icon: GitBranch,
-    title: "One agent crosses nine stages",
-    body: "Plan through govern, in order. After the deploy it watches health and error rate, and sends traffic back if they degrade.",
+    title: "Agents stop at the merge",
+    body: "Plan, code, the merge request, the pipeline, the image, and the security note. Then they post Ready to merge and stop.",
   },
   {
     icon: Megaphone,
-    title: "Come back to a release",
-    body: "The changelog is published and the X, Discord, and Telegram posts are already drafted.",
+    title: "You click Merge",
+    body: "That is the only designed touch. The pipeline publishes the release, deploys when you asked it to, and records who approved.",
   },
 ];
 

@@ -117,11 +117,11 @@ export function sortJourneys(journeys: Journey[]): Journey[] {
   });
 }
 
-/** Latest quiet ship. A rollback is not a quiet ship. */
+/** Latest shipped journey that recorded the one merge click. A rollback is not the flagship. */
 export function flagshipJourney(journeys: Journey[]): Journey | undefined {
   const shipped = journeys.filter((journey) => isShipped(journey) && !didRollback(journey));
-  const zero = shipped.filter((journey) => journey.humanTouches === 0);
-  const pool = zero.length > 0 ? zero : shipped;
+  const approved = shipped.filter((journey) => stageById(journey.stages, "approval")?.status === "passed");
+  const pool = approved.length > 0 ? approved : shipped;
   return [...pool].sort((a, b) => {
     const aTime = stageById(a.stages, "configure")?.completedAt ?? a.createdAt;
     const bTime = stageById(b.stages, "configure")?.completedAt ?? b.createdAt;

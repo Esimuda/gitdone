@@ -29,6 +29,7 @@ function isRollback(stage: StageRecord, status: StageRecord["status"]) {
 }
 
 function tone(stage: StageRecord, status: StageRecord["status"]) {
+  if (stage.stage === "approval" && status === "passed") return "border-primary/50 shadow-[0_24px_70px_-40px_rgba(252,109,38,0.65)]";
   if (isRollback(stage, status)) return "border-danger shadow-[0_24px_70px_-40px_rgba(159,18,57,0.55)]";
   if (status === "running") return "border-accent shadow-[0_24px_70px_-40px_rgba(107,79,187,0.9)]";
   if (status === "attention") return "border-danger";
@@ -44,6 +45,7 @@ function statusClass(stage: StageRecord, status: StageRecord["status"]) {
 }
 
 function statusLabel(stage: StageRecord, status: StageRecord["status"]) {
+  if (stage.stage === "approval" && status === "passed") return "Approved";
   if (isRollback(stage, status) && status === "passed") return "Rolled back";
   return STATUS_LABEL[status];
 }

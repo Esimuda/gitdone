@@ -1,39 +1,14 @@
 ---
 name: release
-description: Release stage of the GitDone issue-to-production flow. Use when the merge request is green and a GitLab Release plus changelog must be published.
+description: What the default-branch pipeline does after a person merges. The Duo flow does not run this stage.
 ---
 
 # Release
 
-Merge the merge request, then confirm the GitLab Release the pipeline published.
+The agent flow stops at Ready to merge. It does not merge, and it does not create the release.
 
-## Merge
+GitLab blocks AI workflows from merging (`PUT /merge_requests/:iid/merge` returns 403, and the `/merge` quick action returns `403 Forbidden - Quick actions merge cannot be used with AI workflows`). `POST /releases` is outside the flow token scope.
 
-Merge only when verify and secure are `passed`.
+After a person clicks Merge, `release:notes` and `release:publish` on the default-branch pipeline publish the GitLab Release with `CI_JOB_TOKEN`. The tag is `v<major>.<minor>.<pipeline iid>`. The notes are the merged merge request description. `journey:record` then posts the `approval` stage: who merged, and when.
 
-The flow token (`ai_workflows` scope) is refused by `PUT .../merge_requests/:iid/merge` and by `POST .../releases`. It is allowed to post notes, and GitLab runs quick actions in notes. Merge with the `/merge` quick action:
-
-```shell
-curl --fail-with-body -s -X POST \
-  --header "Authorization: Bearer $GITLAB_TOKEN" \
-  --data-urlencode "body=/merge" \
-  "$GITLAB_BASE_URL/api/v4/projects/<project id>/merge_requests/<mr iid>/notes"
-```
-
-Use `Authorization: Bearer`, not `PRIVATE-TOKEN`. If `$GITLAB_BASE_URL` is empty use `https://gitlab.com`. Then read the merge request with `get_merge_request` until `state` is `merged` and record `merge_commit_sha`. If the pipeline is still running, `/merge` sets auto-merge, so keep reading. If the request is refused or the merge request is not merged after about ten minutes, record the response, set `release` to `attention`, and final answer `stop`. Do not bypass branch protection and do not push to `main` directly.
-
-## Release
-
-You do not create the release. The `release:notes` and `release:publish` jobs on the `main` pipeline for the merge commit publish it, with tag `v<major>.<minor>.<pipeline iid>` and the merge request description as the notes.
-
-With `gitlab_api_get`, find the pipeline on `main` whose `sha` is the merge commit, wait until `release:publish` has finished, then read `/projects/:id/releases` and pick the release whose commit is the merge commit. That release URL and tag are the evidence.
-
-GitDone turns the changelog headings into the changelog and drafts X, Discord, and Telegram posts. You do not post to those networks.
-
-## Record
-
-Set `release` to `passed` with the release URL and `releaseTag`.
-
-## Finish
-
-Final answer is exactly `continue` or `stop`.
+Do not store a human token in CI to merge from the agent. That would claim a hands-off category the platform does not allow.

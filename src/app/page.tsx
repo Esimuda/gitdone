@@ -31,22 +31,22 @@ export default async function HomePage() {
             {OVERNIGHT_HEADLINE}
           </h1>
           <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            One issue on this repository. Nobody was at the keyboard. The flow patched the leak, proved the image was
-            clean, deployed it, and left the morning post written.
+            Agents do everything up to the merge. You approve with one click. The overnight path below is this
+            repository: the agents patched the leak, and one merge put it in production before morning.
           </p>
           {flagship ? <OvernightPath journey={flagship} /> : null}
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              href="/mission"
+              href="/connect"
               className="inline-flex h-12 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground shadow-[0_16px_40px_-18px_rgba(252,109,38,0.9)]"
             >
-              Open mission control
+              Connect your GitLab project in two minutes
             </Link>
             <Link
-              href="/releases"
+              href="/mission"
               className="inline-flex h-12 items-center rounded-full border border-border bg-card/70 px-5 text-sm font-medium"
             >
-              Read the releases
+              Open mission control
             </Link>
           </div>
           <div className="mt-12">
@@ -69,7 +69,7 @@ export default async function HomePage() {
       <section className="border-y border-border bg-card/50">
         <dl className="mx-auto grid max-w-6xl grid-cols-2 gap-px bg-border md:grid-cols-4">
           <Metric
-            label="Last zero-touch ship"
+            label="Last approved ship"
             value={
               flagshipLead !== null ? <CountUp value={flagshipLead} kind="duration" /> : "—"
             }
@@ -107,7 +107,7 @@ export default async function HomePage() {
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <h2 className="text-xs tracking-[0.18em] text-muted-foreground uppercase">How it works</h2>
-        <p className="mt-3 max-w-xl text-3xl font-medium tracking-tight sm:text-4xl">Three moves. Then you can leave.</p>
+        <p className="mt-3 max-w-xl text-3xl font-medium tracking-tight sm:text-4xl">Three moves. Then one click.</p>
         <HowItWorks />
       </section>
 

@@ -1,4 +1,12 @@
-import { ARTIFACT_STAGE_IDS, ROLLBACK_STAGE, STAGE_IDS, type StageId, type StageRecord, type StageStatus } from "./types";
+import {
+  APPROVAL_STAGE,
+  ARTIFACT_STAGE_IDS,
+  ROLLBACK_STAGE,
+  STAGE_IDS,
+  type StageId,
+  type StageRecord,
+  type StageStatus,
+} from "./types";
 
 export const STAGE_LABEL: Record<StageId, string> = {
   plan: "Plan",
@@ -6,6 +14,7 @@ export const STAGE_LABEL: Record<StageId, string> = {
   verify: "Verify",
   package: "Package",
   secure: "Secure",
+  approval: "Approval",
   release: "Release",
   configure: "Configure",
   monitor: "Monitor",
@@ -19,6 +28,7 @@ export const STAGE_BLURB: Record<StageId, string> = {
   verify: "Tests on the pipeline",
   package: "Container image",
   secure: "Findings triaged and fixed",
+  approval: "One click to merge",
   release: "GitLab Release and changelog",
   configure: "Deploy to Cloud Run",
   monitor: "Health and error rate after the deploy",
@@ -44,10 +54,16 @@ export function normalizeStages(input: StageRecord[]): StageRecord[] {
     if (ARTIFACT_STAGE_SET.has(stage.stage)) byId.set(stage.stage, stage);
   }
   const core = STAGE_IDS.map((id) => byId.get(id) ?? emptyStage(id));
+  const approval = byId.get(APPROVAL_STAGE);
+  if (approval) {
+    const secureAt = core.findIndex((stage) => stage.stage === "secure");
+    core.splice(secureAt + 1, 0, approval);
+  }
   const rollback = byId.get(ROLLBACK_STAGE);
-  if (!rollback) return core;
-  const monitorAt = core.findIndex((stage) => stage.stage === "monitor");
-  core.splice(monitorAt + 1, 0, rollback);
+  if (rollback) {
+    const monitorAt = core.findIndex((stage) => stage.stage === "monitor");
+    core.splice(monitorAt + 1, 0, rollback);
+  }
   return core;
 }
 

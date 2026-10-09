@@ -5,7 +5,9 @@ description: Monitor stage of the GitDone issue-to-production flow. Use after a 
 
 # Monitor
 
-Watch the production Cloud Run service for `ROLLBACK_WINDOW_MINUTES` (default 5). This is the same rule as `decideRollback` in `src/lib/rollback-guard.ts` and the `rollback-guard` CI job.
+The agent flow stops before merge. After a person clicks Merge, and only when `GCP_DEPLOY` is `true`, the `rollback-guard` job watches production. This skill is the spec for that job. The same rule is `decideRollback` in `src/lib/rollback-guard.ts`.
+
+Watch the production Cloud Run service for `ROLLBACK_WINDOW_MINUTES` (default 5).
 
 ## Checks
 

@@ -12,7 +12,8 @@ test("landing tells the overnight path and marks sample data", async ({ page }) 
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("announced by morning");
   await expect(page.getByText("Sample data").first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "GitDone" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Connect your GitLab project in two minutes" })).toBeVisible();
+  await expect(page.getByText("approve with one click").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Finding" }).first()).toBeVisible();
 });
 
@@ -26,12 +27,22 @@ test("mission control shows the overnight path and the rollback count", async ({
   await expect(page.getByRole("link", { name: /Health probe deploy raised the error rate/ })).toBeVisible();
 });
 
-test("the overnight ship shows nine stages and zero touches", async ({ page }) => {
+test("the overnight ship shows the one human touch", async ({ page }) => {
   await page.goto("/mission/214");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("production image");
-  await expect(page.getByText("0 human touches").first()).toBeVisible();
+  await expect(page.getByText("1 human touch").first()).toBeVisible();
+  await expect(page.getByText("The one human touch")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Approval" })).toBeVisible();
+  await expect(page.getByText(/Olabowale Babalola merged/).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Govern" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Secure" })).toBeVisible();
+});
+
+test("connect explains the two-minute install", async ({ page }) => {
+  await page.goto("/connect");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Connect your GitLab project in two minutes");
+  await expect(page.getByText("approve with one click").first()).toBeVisible();
+  await expect(page.getByLabel("Project")).toBeVisible();
+  await expect(page.getByLabel("Personal access token")).toBeVisible();
 });
 
 test("a rollback journey is distinct", async ({ page }) => {

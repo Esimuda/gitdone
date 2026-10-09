@@ -11,7 +11,7 @@ If the latest journey note already has a `rollback` stage, do not draft a celebr
 
 ## Evidence
 
-Post the final journey note. Every stage that ran is `passed` or an honest `attention`. `humanTouches` is the number of times a person had to reply. The happy path is `0`.
+Post the final journey note. Every stage that ran is `passed` or an honest `attention`. `humanTouches` counts real human steps. The designed supervised run is `1`: the person who clicked Merge. `journey:record` writes that `approval` stage. The agent flow does not.
 
 `govern.details` lists:
 

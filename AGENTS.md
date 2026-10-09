@@ -20,7 +20,8 @@ GitDone is a Next.js App Router app. It is the release hub and mission control f
 - Sample journeys are this repository shipping itself, and the UI marks them Sample data.
 - Journey notes follow `docs/journey-schema.md`. Newest valid `<!-- journey:v1 -->` note wins. `rollback` is optional and sits after `monitor`.
 - Do not log tokens, emails, or secrets. GitLab calls use `Authorization: Bearer`.
-- Happy-path automation does not add a human approval gate. A single clarifying question is allowed only when the issue cannot be planned.
+- Supervised. The flow stops at Ready to merge. GitLab blocks AI workflows from merging and from creating releases. One human click, Merge, is the designed touch and is recorded as the `approval` stage.
+- A single clarifying question is allowed only when the issue cannot be planned. That is a second touch, and it is quoted.
 
 ## Checks
 

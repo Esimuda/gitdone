@@ -64,4 +64,23 @@ describe("journey notes", () => {
     expect(ids?.indexOf("rollback")).toBe((ids?.indexOf("monitor") ?? 0) + 1);
     expect(parsed?.stages.find((stage) => stage.stage === "rollback")?.status).toBe("passed");
   });
+
+  it("places approval after secure", () => {
+    const raw = JSON.stringify({
+      version: 1,
+      issueIid: 214,
+      humanTouches: 1,
+      touchNotes: ["Olabowale Babalola merged MR !46 at 03:00 UTC."],
+      stages: [
+        { stage: "secure", status: "passed", summary: "Clean." },
+        { stage: "approval", status: "passed", summary: "Olabowale Babalola merged MR !46." },
+        { stage: "release", status: "passed", summary: "v0.9.0" },
+      ],
+    });
+    const parsed = parseJourneyArtifact(raw);
+    const ids = parsed?.stages.map((stage) => stage.stage) ?? [];
+    expect(ids.indexOf("approval")).toBe(ids.indexOf("secure") + 1);
+    expect(ids.indexOf("release")).toBe(ids.indexOf("approval") + 1);
+    expect(parsed?.humanTouches).toBe(1);
+  });
 });

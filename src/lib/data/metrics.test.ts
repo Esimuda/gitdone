@@ -22,7 +22,7 @@ describe("demo overview", () => {
     expect(data.overview).toMatchObject({
       leadTimeMinutes: 71,
       leadTimeSample: 4,
-      humanInterventions: 1,
+      humanInterventions: 2,
       humanSample: 5,
       stageCoverage: 9,
       stageCount: 9,
@@ -30,7 +30,7 @@ describe("demo overview", () => {
       findingsOpen: 1,
       shipped: 4,
       inFlight: 1,
-      zeroTouchShips: 2,
+      zeroTouchShips: 1,
       shipsWithTouchData: 4,
       rollbacks: 1,
     });
@@ -46,6 +46,8 @@ describe("demo overview", () => {
     expect(leadTimeMinutes(flagship!)).toBe(52);
     expect(isShipped(flagship!)).toBe(true);
     expect(didRollback(flagship!)).toBe(false);
+    expect(flagship?.humanTouches).toBe(1);
+    expect(flagship?.stages.find((stage) => stage.stage === "approval")?.status).toBe("passed");
     const rolled = data.journeys.find((journey) => journey.issueIid === 207);
     expect(didRollback(rolled!)).toBe(true);
     expect(rolled?.stages.map((stage) => stage.stage)).toEqual([
@@ -75,7 +77,7 @@ describe("demo overview", () => {
       "govern",
     ];
     for (const journey of data.journeys) {
-      if (didRollback(journey)) continue;
+      if (didRollback(journey) || journey.stages.some((stage) => stage.stage === "approval")) continue;
       expect(journey.stages.map((stage) => stage.stage)).toEqual(nine);
     }
   });

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { ApprovalSlip } from "@/components/approval-slip";
 import { JourneyConsole } from "@/components/journey-console";
 import { getAppData } from "@/lib/data";
 import { formatDuration, formatTimestamp, touchLabel } from "@/lib/format";
 import { didRollback, leadTimeMinutes } from "@/lib/data/metrics";
+import { stageById } from "@/lib/data/stages";
 
 type Params = { iid: string };
 
@@ -23,6 +25,7 @@ export default async function JourneyPage({ params }: { params: Promise<Params> 
   const journey = data.journeys.find((item) => String(item.issueIid) === iid);
   if (!journey) notFound();
   const lead = leadTimeMinutes(journey);
+  const approval = stageById(journey.stages, "approval");
   const provenance =
     journey.provenance === "artifact"
       ? "Recorded by the flow"
@@ -64,6 +67,7 @@ export default async function JourneyPage({ params }: { params: Promise<Params> 
           {data.source === "demo" ? <span className="text-muted-foreground"> · sample URL</span> : null}
         </p>
       ) : null}
+      {approval && approval.status === "passed" ? <ApprovalSlip stage={approval} /> : null}
       {didRollback(journey) ? (
         <p className="mt-6 rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm leading-relaxed">
           Rolled back. Production traffic is on the previous revision, and the issue is open again with the evidence.

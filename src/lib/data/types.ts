@@ -10,10 +10,13 @@ export const STAGE_IDS = [
   "govern",
 ] as const;
 
+/** The one human click: merging the request the agents prepared. */
+export const APPROVAL_STAGE = "approval" as const;
+
 /** Present only when a production deploy was sent back to the previous revision. */
 export const ROLLBACK_STAGE = "rollback" as const;
 
-export const ARTIFACT_STAGE_IDS = [...STAGE_IDS, ROLLBACK_STAGE] as const;
+export const ARTIFACT_STAGE_IDS = [...STAGE_IDS, APPROVAL_STAGE, ROLLBACK_STAGE] as const;
 
 export type StageId = (typeof ARTIFACT_STAGE_IDS)[number];
 
