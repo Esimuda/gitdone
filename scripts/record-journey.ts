@@ -17,8 +17,10 @@ const ORDER = ["plan", "create", "verify", "package", "secure", "approval", "rel
 async function gitlab(path: string, init: RequestInit = {}, useNoteToken = false): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
-  if (useNoteToken && noteToken) headers.set("Authorization", `Bearer ${noteToken}`);
+  // Prefer the project's note token for every call: CI_JOB_TOKEN cannot read issue notes.
+  if (noteToken) headers.set("Authorization", `Bearer ${noteToken}`);
   else headers.set("JOB-TOKEN", jobToken);
+  void useNoteToken;
   return fetch(`${api}${path}`, { ...init, headers });
 }
 
