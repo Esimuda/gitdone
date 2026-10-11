@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { allowRequest, getDb } from "./db";
+import { allowRequest } from "./db";
 
 export const SESSION_COOKIE = "gitdone_session";
 
-export function sessionCookie(id: string) {
+export function sessionCookie(sealedId: string) {
   return {
     name: SESSION_COOKIE,
-    value: id,
+    value: sealedId,
     options: {
       httpOnly: true,
       sameSite: "lax" as const,
@@ -22,8 +22,8 @@ export function clientBucket(request: Request): string {
   return forwarded.replace(/[^\w.:-]/g, "").slice(0, 80) || "local";
 }
 
-export function limited(request: Request): NextResponse | null {
-  const allowed = allowRequest(getDb(), clientBucket(request), Date.now(), 10 * 60 * 1000, 20);
+export async function limited(request: Request): Promise<NextResponse | null> {
+  const allowed = await allowRequest(clientBucket(request), Date.now(), 10 * 60 * 1000, 20);
   if (allowed) return null;
   return NextResponse.json({ error: "Too many attempts. Wait a few minutes and try again." }, { status: 429 });
 }
@@ -32,4 +32,10 @@ export function publicOrigin(request: Request): string {
   const configured = process.env.GITDONE_PUBLIC_URL?.trim();
   if (configured) return configured.replace(/\/$/, "");
   return new URL(request.url).origin;
+}
+
+export function sameOrigin(request: Request): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+  return origin === publicOrigin(request);
 }

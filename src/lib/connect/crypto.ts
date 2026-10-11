@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 export type SealedToken = {
   ciphertext: string;
@@ -6,12 +6,17 @@ export type SealedToken = {
   tag: string;
 };
 
+/**
+ * Accepts a base64-encoded 32-byte key, or any other secret (including a Render
+ * generateValue). Other secrets are hashed with SHA-256 so the AES key is 32 bytes.
+ */
 export function tokenKeyFromEnv(value: string | undefined): Buffer {
   const raw = value?.trim() ?? "";
-  if (!raw) throw new Error("Set GITDONE_TOKEN_KEY to a 32-byte key, base64-encoded.");
-  const key = Buffer.from(raw, "base64");
-  if (key.length !== 32) throw new Error("GITDONE_TOKEN_KEY must decode to 32 bytes.");
-  return key;
+  if (!raw) throw new Error("Set GITDONE_TOKEN_KEY before storing a GitLab token.");
+  const decoded = Buffer.from(raw, "base64");
+  const looksEncoded = /^[A-Za-z0-9+/]+={0,2}$/.test(raw) && raw.length >= 43 && decoded.length === 32;
+  if (looksEncoded) return decoded;
+  return createHash("sha256").update(raw).digest();
 }
 
 export function sealToken(token: string, key: Buffer): SealedToken {

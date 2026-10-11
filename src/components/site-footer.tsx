@@ -32,6 +32,11 @@ export function SiteFooter() {
                 Connect a project
               </Link>
             </li>
+            <li>
+              <Link href="/sign-in" className="hover:text-primary">
+                Sign in
+              </Link>
+            </li>
           </ul>
         </div>
         <div>

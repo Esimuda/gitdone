@@ -37,12 +37,13 @@ test("the overnight ship shows the one human touch", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Govern" })).toBeVisible();
 });
 
-test("connect explains the two-minute install", async ({ page }) => {
+test("sign-in is the way into a project", async ({ page }) => {
+  await page.goto("/sign-in");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Sign in with GitLab");
+  await expect(page.locator("#content").getByRole("link", { name: "Sign in with GitLab" })).toBeVisible();
   await page.goto("/connect");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Connect your GitLab project in two minutes");
-  await expect(page.getByText("approve with one click").first()).toBeVisible();
-  await expect(page.getByLabel("Project")).toBeVisible();
-  await expect(page.getByLabel("Personal access token")).toBeVisible();
+  await expect(page).toHaveURL(/\/sign-in/);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Sign in with GitLab");
 });
 
 test("a rollback journey is distinct", async ({ page }) => {

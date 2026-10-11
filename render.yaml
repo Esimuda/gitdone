@@ -1,0 +1,39 @@
+# Render blueprint for GitDone.
+# Apply from the Render dashboard: New > Blueprint, point it at this file.
+databases:
+  - name: gitdone-db
+    databaseName: gitdone
+    user: gitdone
+    plan: free
+    region: frankfurt
+
+services:
+  - type: web
+    name: gitdone
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: gitdone-db
+          property: connectionString
+      - key: GITDONE_SESSION_SECRET
+        generateValue: true
+      - key: GITDONE_TOKEN_KEY
+        generateValue: true
+      - key: NODE_VERSION
+        value: "22.14.0"
+      - key: GITLAB_OAUTH_CLIENT_ID
+        sync: false
+      - key: GITLAB_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: GITDONE_PUBLIC_URL
+        sync: false
+      - key: GITLAB_TOKEN
+        sync: false
+      - key: GITLAB_PROJECT_ID
+        value: "87419187"

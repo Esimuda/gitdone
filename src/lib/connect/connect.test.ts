@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { sealToken, openToken, tokenKeyFromEnv } from "./crypto";
-import { allowRequest, openDatabase, resetDbForTests, saveProject, tokenForUser, saveUser } from "./db";
+import { createHash } from "node:crypto";
+import { allowRequest, openMemorySql, resetSqlForTests, saveProject, tokenForUser, saveUser } from "./db";
 import { GitlabApi } from "./gitlab-api";
 import { installGitDone } from "./install";
 import { assertNoSecret, planInstall } from "./install-plan";
@@ -9,8 +10,8 @@ import { parseConnectBody } from "./validate";
 
 const KEY = Buffer.alloc(32, 7).toString("base64");
 
-afterEach(() => {
-  resetDbForTests();
+afterEach(async () => {
+  await resetSqlForTests();
   delete process.env.GITDONE_TOKEN_KEY;
 });
 
@@ -119,30 +120,35 @@ describe("install against a mocked GitLab", () => {
 });
 
 describe("token storage", () => {
-  it("round-trips a token and rate-limits a bucket", () => {
+  it("round-trips a token and rate-limits a bucket", async () => {
     process.env.GITDONE_TOKEN_KEY = KEY;
     const key = tokenKeyFromEnv(KEY);
     const sealed = sealToken("glpat-round-trip-token-00", key);
     expect(openToken(sealed, key)).toBe("glpat-round-trip-token-00");
     expect(sealed.ciphertext).not.toContain("glpat-round-trip");
+    const derived = tokenKeyFromEnv("render-generate-value-not-base64");
+    expect(derived.equals(createHash("sha256").update("render-generate-value-not-base64").digest())).toBe(true);
 
-    const db = openDatabase(":memory:");
-    saveUser(db, { id: "7", username: "ada", name: "Ada" }, "glpat-round-trip-token-00");
-    expect(tokenForUser(db, "7")).toBe("glpat-round-trip-token-00");
-    const id = saveProject(db, {
-      gitlabProjectId: "9",
-      path: "acme/demo",
-      name: "Demo",
-      webUrl: "https://gitlab.example/acme/demo",
-      ownerGitlabUserId: "7",
-      token: "glpat-round-trip-token-00",
-      mergeRequestUrl: "https://gitlab.example/acme/demo/-/merge_requests/4",
-    });
+    const sql = await openMemorySql();
+    await saveUser({ id: "7", username: "ada", name: "Ada" }, "glpat-round-trip-token-00", sql);
+    expect(await tokenForUser("7", sql)).toBe("glpat-round-trip-token-00");
+    const id = await saveProject(
+      {
+        gitlabProjectId: "9",
+        path: "acme/demo",
+        name: "Demo",
+        webUrl: "https://gitlab.example/acme/demo",
+        ownerGitlabUserId: "7",
+        token: "glpat-round-trip-token-00",
+        mergeRequestUrl: "https://gitlab.example/acme/demo/-/merge_requests/4",
+      },
+      sql,
+    );
     expect(id).toBeGreaterThan(0);
-    expect(allowRequest(db, "ip", 1_000, 10_000, 2)).toBe(true);
-    expect(allowRequest(db, "ip", 1_100, 10_000, 2)).toBe(true);
-    expect(allowRequest(db, "ip", 1_200, 10_000, 2)).toBe(false);
-    db.close();
+    expect(await allowRequest("ip", 1_000, 10_000, 2, sql)).toBe(true);
+    expect(await allowRequest("ip", 1_100, 10_000, 2, sql)).toBe(true);
+    expect(await allowRequest("ip", 1_200, 10_000, 2, sql)).toBe(false);
+    await sql.close();
   });
 });
 

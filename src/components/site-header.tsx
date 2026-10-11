@@ -4,29 +4,32 @@ import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { AccountMenu } from "@/components/account-menu";
 import { LogoMark, Wordmark } from "@/components/logo";
 import { SourceBadge } from "@/components/source-banner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { AppData } from "@/lib/data/types";
 
-const LINKS = [
-  { href: "/mission", label: "Mission" },
-  { href: "/releases", label: "Releases" },
-  { href: "/connect", label: "Connect" },
-];
-
 export type HeaderProject = { id: number; name: string; path: string };
+export type HeaderViewer = { name: string; username: string; avatarUrl: string | null };
 
 export function SiteHeader({
   source,
   projects = [],
+  viewer = null,
 }: {
   source?: AppData["source"];
   projects?: HeaderProject[];
+  viewer?: HeaderViewer | null;
 }) {
   const pathname = usePathname();
-  const badge = pathname.startsWith("/w/") ? "connected" : source;
+  const badge = pathname.startsWith("/w/") || pathname.startsWith("/projects") ? "connected" : source;
   const [open, setOpen] = useState(false);
+  const links = [
+    { href: viewer ? "/projects" : "/mission", label: "Mission" },
+    { href: "/releases", label: "Releases" },
+    { href: viewer ? "/connect" : "/sign-in", label: viewer ? "Connect" : "Sign in" },
+  ];
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/80 backdrop-blur-md">
@@ -39,7 +42,7 @@ export function SiteHeader({
           {badge ? <SourceBadge source={badge} /> : null}
         </div>
         <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
-          {LINKS.map((link) => {
+          {links.map((link) => {
             const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
             return (
               <Link
@@ -59,7 +62,7 @@ export function SiteHeader({
               </summary>
               <div className="absolute right-0 z-20 mt-2 w-64 rounded-2xl border border-border bg-card p-2 shadow-xl">
                 {projects.map((project) => (
-                  <Link key={project.id} href={`/w/${project.id}`} className="block rounded-xl px-3 py-2 text-sm hover:bg-muted">
+                  <Link key={project.id} href={`/projects/${project.id}`} className="block rounded-xl px-3 py-2 text-sm hover:bg-muted">
                     <span className="block font-medium">{project.name}</span>
                     <span className="block text-xs text-muted-foreground">{project.path}</span>
                   </Link>
@@ -69,6 +72,7 @@ export function SiteHeader({
           ) : null}
         </nav>
         <div className="flex items-center gap-2">
+          {viewer ? <AccountMenu name={viewer.name} username={viewer.username} avatarUrl={viewer.avatarUrl} /> : null}
           <ThemeToggle />
           <button
             type="button"
@@ -84,7 +88,7 @@ export function SiteHeader({
       </div>
       {open ? (
         <nav id="mobile-nav" className="border-t border-border px-4 py-3 md:hidden" aria-label="Mobile">
-          {LINKS.map((link) => (
+          {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -97,7 +101,7 @@ export function SiteHeader({
           {projects.map((project) => (
             <Link
               key={project.id}
-              href={`/w/${project.id}`}
+              href={`/projects/${project.id}`}
               className="block rounded-xl px-3 py-3 text-base"
               onClick={() => setOpen(false)}
             >

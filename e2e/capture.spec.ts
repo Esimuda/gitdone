@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 
@@ -49,6 +50,7 @@ test("capture desktop and mobile", async ({ page }) => {
   await page.goto("/mission");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("announced by morning");
   await settle(page, 1500);
+  await page.screenshot({ path: `${artifactDir}/mission.png`, fullPage: true });
   await page.screenshot({ path: `${outDir}/mission-desktop.png`, fullPage: true });
 
   await page.goto("/mission/214");
@@ -59,11 +61,23 @@ test("capture desktop and mobile", async ({ page }) => {
   await page.screenshot({ path: `${artifactDir}/approval.png`, fullPage: true });
   await page.screenshot({ path: `${outDir}/journey-desktop.png`, fullPage: true });
 
+  await page.goto("/sign-in");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Sign in with GitLab");
+  await expect(page.locator("#content").getByRole("link", { name: "Sign in with GitLab" })).toBeVisible();
+  await settle(page, 600);
+  await page.screenshot({ path: `${artifactDir}/signin.png`, fullPage: true });
+
+  const cookie = execFileSync("node", ["--experimental-strip-types", "scripts/seed-screenshot-session.ts"], {
+    encoding: "utf8",
+  }).trim();
+  await page.context().addCookies([
+    { name: "gitdone_session", value: cookie, url: "http://127.0.0.1:3847", httpOnly: true, sameSite: "Lax" },
+  ]);
   await page.goto("/connect");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Connect your GitLab project in two minutes");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Connect your first project");
   await expect(page.getByText("approve with one click").first()).toBeVisible();
   await settle(page, 800);
-  await page.screenshot({ path: `${artifactDir}/connect.png`, fullPage: true });
+  await page.screenshot({ path: `${artifactDir}/onboarding.png`, fullPage: true });
 
   await page.goto("/mission/207");
   await expect(page.getByRole("heading", { name: "Rollback" })).toBeVisible();

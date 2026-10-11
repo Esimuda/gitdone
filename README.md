@@ -149,6 +149,12 @@ Health check for Cloud Run: `GET /api/health`.
 
 RSS: `GET /feed.xml`.
 
+## Sign in and deploy
+
+People sign in with GitLab (OAuth authorization code and PKCE). Connected projects belong to that user. A signed-in Developer on the same GitLab project can open mission control. The public read-only page `/w/[id]` stays off until the owner publishes it. The landing page and `/mission` remain the GitDone showcase, readable without an account.
+
+Render setup, including the OAuth application fields, is in [`docs/deploy-render.md`](docs/deploy-render.md).
+
 ## Deploy
 
 The container is a Next.js standalone build. Cloud Run should set the container port to 8080 and the HTTP health check to `/api/health`.
