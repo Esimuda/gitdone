@@ -13,7 +13,7 @@ export async function loadShortSha(fetcher: FetchLike = (input) => fetch(input, 
     const short = typeof body?.shortSha === "string" ? body.shortSha.trim() : "";
     if (short) return short;
     const sha = typeof body?.sha === "string" ? body.sha.trim() : "";
-    return sha ? sha.slice(0, 7) : VERSION_FALLBACK;
+    return sha ? sha.slice(0, 8) : VERSION_FALLBACK;
   } catch {
     return VERSION_FALLBACK;
   }

@@ -5,11 +5,11 @@ const ok = (body: unknown) => async () => ({ ok: true, json: async () => body })
 
 describe("loadShortSha", () => {
   it("returns the short sha from /api/version", async () => {
-    expect(await loadShortSha(ok({ sha: "abcdef1234567890", shortSha: "abcdef1" }))).toBe("abcdef1");
+    expect(await loadShortSha(ok({ sha: "abcdef1234567890", shortSha: "abcdef12" }))).toBe("abcdef12");
   });
 
   it("shortens the full sha when shortSha is missing", async () => {
-    expect(await loadShortSha(ok({ sha: "abcdef1234567890" }))).toBe("abcdef1");
+    expect(await loadShortSha(ok({ sha: "abcdef1234567890" }))).toBe("abcdef12");
   });
 
   it("falls back to dev when the request throws", async () => {
