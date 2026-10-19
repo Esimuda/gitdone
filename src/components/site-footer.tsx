@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/logo";
-import { PRODUCT_NAME } from "@/config/brand";
+import { VersionBadge } from "@/components/version-badge";
 import { STAGE_IDS } from "@/lib/data/types";
 import { STAGE_LABEL } from "@/lib/data/stages";
 
@@ -48,7 +48,10 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-border">
-        <p className="mx-auto max-w-6xl px-4 py-4 text-xs text-muted-foreground sm:px-6">MIT license · {PRODUCT_NAME}</p>
+        <p className="mx-auto flex max-w-6xl flex-wrap justify-between gap-2 px-4 py-4 text-xs text-muted-foreground sm:px-6">
+          <span>MIT license</span>
+          <VersionBadge />
+        </p>
       </div>
     </footer>
   );
