@@ -3,8 +3,11 @@ import { NextResponse } from "next/server";
 import { openSessionId, requireSessionSecret } from "@/lib/auth/session-cookie";
 import { deleteSession } from "@/lib/connect/db";
 import { publicOrigin, sameOrigin, SESSION_COOKIE } from "@/lib/connect/http";
+import { rateLimitAuth } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  const throttled = rateLimitAuth(request);
+  if (throttled) return throttled;
   const origin = publicOrigin(request);
   if (!sameOrigin(request)) return NextResponse.json({ error: "Cross-site request blocked." }, { status: 403 });
   const jar = await cookies();

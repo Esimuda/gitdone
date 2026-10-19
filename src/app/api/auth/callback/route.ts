@@ -3,10 +3,13 @@ import { requireSessionSecret, safeNext } from "@/lib/auth/session-cookie";
 import { sealSessionId } from "@/lib/auth/session-cookie";
 import { takeOauthState } from "@/lib/connect/db";
 import { limited, publicOrigin, sessionCookie } from "@/lib/connect/http";
+import { rateLimitAuth } from "@/lib/rate-limit";
 import { exchangeCode } from "@/lib/connect/oauth";
 import { establishSession } from "@/lib/connect/session";
 
 export async function GET(request: Request) {
+  const throttled = rateLimitAuth(request);
+  if (throttled) return throttled;
   const blocked = await limited(request);
   if (blocked) return blocked;
   const url = new URL(request.url);
