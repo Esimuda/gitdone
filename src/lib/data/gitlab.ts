@@ -2,7 +2,7 @@ import { buildAnnouncements } from "./announcements";
 import { computeOverview, sortJourneys, stageTallies } from "./metrics";
 import { readLatestJourney } from "./parse-journey";
 import { emptyStage, normalizeStages, stageById } from "./stages";
-import type { AppData, ChangelogKind, Journey, ProjectInfo, ReleaseEntry, StageStatus } from "./types";
+import type { AppData, ChangelogKind, Journey, ProjectInfo, ReleaseEntry, StageRecord, StageStatus } from "./types";
 
 export class GitlabError extends Error {
   constructor(message: string) {
@@ -122,6 +122,43 @@ export function parseChangelog(description: string): { kind: ChangelogKind; text
   return items;
 }
 
+/**
+ * A merged MR, a release whose notes close the issue, and a passed approval stage
+ * (written by the journey:record job) mean the change shipped. The flow's own note
+ * is written before the merge, so Release and Govern would otherwise stay pending.
+ */
+export function reconcileMergedRelease(
+  stages: StageRecord[],
+  mr: GitlabMergeRequest | undefined,
+  release: GitlabRelease | undefined,
+): StageRecord[] {
+  if (!mr || mr.state !== "merged" || !release) return stages;
+  if (stageById(stages, "approval")?.status !== "passed") return stages;
+  if (stageById(stages, "rollback")) return stages;
+  const releasedAt = release.released_at ?? release.created_at ?? mr.merged_at ?? undefined;
+  return stages.map((stage) => {
+    if (stage.status === "passed") return stage;
+    if (stage.stage === "release") {
+      return {
+        ...stage,
+        status: "passed" as const,
+        completedAt: releasedAt,
+        summary: `GitLab Release ${release.tag_name} is published.`,
+        artifacts: release._links?.self ? [{ label: release.tag_name, href: release._links.self }] : stage.artifacts,
+      };
+    }
+    if (stage.stage === "govern") {
+      return {
+        ...stage,
+        status: "passed" as const,
+        completedAt: releasedAt,
+        summary: `Release ${release.tag_name} is published with the changelog from the merge request.`,
+      };
+    }
+    return stage;
+  });
+}
+
 function pipelineStatus(status: string): StageStatus {
   if (status === "success") return "passed";
   if (status === "failed" || status === "canceled") return "attention";
@@ -159,7 +196,7 @@ export function inferJourney(input: {
       state: input.issue.state,
       humanTouches: artifact.humanTouches,
       touchNotes: artifact.touchNotes,
-      stages: artifact.stages,
+      stages: reconcileMergedRelease(artifact.stages, mr, release),
       releaseTag: artifact.releaseTag ?? release?.tag_name,
       deployUrl: artifact.deployUrl,
       provenance: "artifact",
