@@ -1,4 +1,4 @@
-import { stageById } from "@/lib/data/stages";
+import { journeyTimes } from "@/lib/data/metrics";
 import type { Journey } from "@/lib/data/types";
 
 function clock(iso: string | undefined): string {
@@ -11,19 +11,16 @@ function clock(iso: string | undefined): string {
 }
 
 const COPY = [
-  { id: "created", label: "Finding", detail: "A CI token is in the production image." },
-  { id: "create", label: "Patched", detail: "The build-arg is gone. The merge request is open." },
-  { id: "verify", label: "Checked", detail: "The pipeline is green. The new image is clean." },
-  { id: "configure", label: "Deployed", detail: "Cloud Run is serving the clean revision." },
-  { id: "govern", label: "Announced", detail: "The release note is ready before morning." },
+  { id: "found", label: "Finding", detail: "A CI token is in the production image." },
+  { id: "patched", label: "Patched", detail: "The build-arg is gone. The merge request is open." },
+  { id: "checked", label: "Checked", detail: "The pipeline is green. The new image is clean." },
+  { id: "deployed", label: "Deployed", detail: "Cloud Run is serving the clean revision." },
+  { id: "announced", label: "Announced", detail: "The release note is ready before morning." },
 ] as const;
 
 export function OvernightPath({ journey }: { journey: Journey }) {
-  const beats = COPY.map((beat) => {
-    const when =
-      beat.id === "created" ? journey.createdAt : stageById(journey.stages, beat.id)?.completedAt;
-    return { ...beat, time: clock(when) };
-  });
+  const times = journeyTimes(journey);
+  const beats = COPY.map((beat) => ({ ...beat, time: clock(times[beat.id]) }));
 
   return (
     <ol className="mt-10 grid gap-3 sm:grid-cols-5">

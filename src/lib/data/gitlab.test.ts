@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildGitlabUrl, inferJourney, issuesForJourneys, loadGitlabAppData, mapRelease, parseChangelog } from "./gitlab";
-import { computeOverview, isShipped, journeyState } from "./metrics";
+import { computeOverview, isShipped, journeyState, leadTimeMinutes } from "./metrics";
 import type { GitlabIssue, GitlabMergeRequest, GitlabPipeline, GitlabRelease } from "./gitlab";
 
 const issue: GitlabIssue = {
@@ -136,6 +136,14 @@ describe("inferJourney", () => {
     const overview = computeOverview([journey]);
     expect(overview.shipped).toBe(1);
     expect(overview.inFlight).toBe(0);
+  });
+
+  it("ships a merged, released journey without a journey note and measures lead time to the release", () => {
+    const journey = inferJourney({ issue, mergeRequests: [mr], releases: [release], pipelines: [pipeline], notes: [] });
+    expect(isShipped(journey)).toBe(true);
+    expect(journeyState(journey)).toBe("Shipped");
+    expect(leadTimeMinutes(journey)).toBe(60);
+    expect(computeOverview([journey]).leadTimeMinutes).toBe(60);
   });
 
   it("keeps a journey in flight when the merge request is merged but no release exists", () => {
