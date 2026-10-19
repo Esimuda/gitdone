@@ -3,8 +3,17 @@ import { STAGE_IDS } from "./types";
 import { stageById } from "./stages";
 import type { Journey, Overview, StageId, StageTally } from "./types";
 
+/**
+ * Shipped means Cloud Run is serving the change, or a person merged it (approval)
+ * and the GitLab Release exists. The second case covers journeys recorded before the
+ * deploy stages wrote their own notes.
+ */
 export function isShipped(journey: Journey): boolean {
-  return stageById(journey.stages, "configure")?.status === "passed";
+  if (stageById(journey.stages, "configure")?.status === "passed") return true;
+  return (
+    stageById(journey.stages, "approval")?.status === "passed" &&
+    stageById(journey.stages, "release")?.status === "passed"
+  );
 }
 
 /** A rollback stage that actually ran. A missing stage means the guard held. */

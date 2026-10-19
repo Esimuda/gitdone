@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildGitlabUrl, inferJourney, issuesForJourneys, loadGitlabAppData, mapRelease, parseChangelog } from "./gitlab";
+import { computeOverview, isShipped, journeyState } from "./metrics";
 import type { GitlabIssue, GitlabMergeRequest, GitlabPipeline, GitlabRelease } from "./gitlab";
 
 const issue: GitlabIssue = {
@@ -106,6 +107,69 @@ describe("inferJourney", () => {
     expect(journey.provenance).toBe("artifact");
     expect(journey.humanTouches).toBe(0);
     expect(journey.stages[0]?.summary).toBe("From the flow");
+  });
+
+  it("counts a merged and released journey as shipped", () => {
+    const stage = (id: string, status: string, summary = "done") => ({ stage: id, status, summary });
+    const note = {
+      body: `<!-- journey:v1 ${JSON.stringify({
+        version: 1,
+        issueIid: 12,
+        humanTouches: 1,
+        touchNotes: [],
+        stages: [
+          stage("plan", "passed"),
+          stage("create", "passed"),
+          stage("verify", "passed"),
+          stage("package", "passed"),
+          stage("secure", "passed"),
+          stage("approval", "passed", "Ada merged MR !4."),
+        ],
+      })} -->`,
+    };
+    const journey = inferJourney({ issue, mergeRequests: [mr], releases: [release], pipelines: [], notes: [note] });
+    const byId = (id: string) => journey.stages.find((item) => item.stage === id);
+    expect(byId("release")?.status).toBe("passed");
+    expect(byId("govern")?.status).toBe("passed");
+    expect(isShipped(journey)).toBe(true);
+    expect(journeyState(journey)).toBe("Shipped");
+    const overview = computeOverview([journey]);
+    expect(overview.shipped).toBe(1);
+    expect(overview.inFlight).toBe(0);
+  });
+
+  it("keeps a journey in flight when the merge request is merged but no release exists", () => {
+    const note = {
+      body: `<!-- journey:v1 ${JSON.stringify({
+        version: 1,
+        issueIid: 12,
+        humanTouches: 1,
+        touchNotes: [],
+        stages: [
+          { stage: "plan", status: "passed", summary: "ok" },
+          { stage: "approval", status: "passed", summary: "merged" },
+        ],
+      })} -->`,
+    };
+    const journey = inferJourney({ issue, mergeRequests: [mr], releases: [], pipelines: [], notes: [note] });
+    expect(isShipped(journey)).toBe(false);
+    expect(journey.stages.find((item) => item.stage === "release")?.status).toBe("pending");
+    expect(journeyState(journey)).toBe("In flight");
+  });
+
+  it("does not ship an unmerged merge request even when a release names the issue", () => {
+    const open = { ...mr, state: "opened", merged_at: null };
+    const note = {
+      body: `<!-- journey:v1 ${JSON.stringify({
+        version: 1,
+        issueIid: 12,
+        humanTouches: 0,
+        touchNotes: [],
+        stages: [{ stage: "approval", status: "passed", summary: "merged" }],
+      })} -->`,
+    };
+    const journey = inferJourney({ issue, mergeRequests: [open], releases: [release], pipelines: [], notes: [note] });
+    expect(journey.stages.find((item) => item.stage === "release")?.status).toBe("pending");
   });
 
   it("maps a release onto generated posts", () => {
