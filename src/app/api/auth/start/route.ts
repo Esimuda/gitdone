@@ -5,8 +5,11 @@ import { tokenKeyFromEnv } from "@/lib/connect/crypto";
 import { rememberOauthState } from "@/lib/connect/db";
 import { limited, publicOrigin } from "@/lib/connect/http";
 import { authorizeUrl, oauthConfigured } from "@/lib/connect/oauth";
+import { rateLimitAuth } from "@/lib/rate-limit";
 
 export async function GET(request: Request) {
+  const throttled = rateLimitAuth(request);
+  if (throttled) return throttled;
   const blocked = await limited(request);
   if (blocked) return blocked;
   const origin = publicOrigin(request);
