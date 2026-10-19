@@ -6,8 +6,8 @@ import { StageRail } from "@/components/stage-rail";
 import { OVERNIGHT_HEADLINE, PRODUCT_NAME } from "@/config/brand";
 import { getAppData } from "@/lib/data";
 import { formatDuration, formatTimestamp, touchLabel } from "@/lib/format";
-import { currentStage, flagshipJourney, journeyState, leadTimeMinutes, spotlightJourney } from "@/lib/data/metrics";
-import { STAGE_LABEL, stageById } from "@/lib/data/stages";
+import { currentStage, flagshipJourney, journeyState, leadTimeMinutes, shippedAt, spotlightJourney } from "@/lib/data/metrics";
+import { STAGE_LABEL } from "@/lib/data/stages";
 import type { StageRecord } from "@/lib/data/types";
 
 export const metadata: Metadata = { title: "Mission control" };
@@ -22,7 +22,7 @@ export default async function MissionPage() {
   const leads = data.journeys
     .map((journey) => {
       const minutes = leadTimeMinutes(journey);
-      const completed = stageById(journey.stages, "configure")?.completedAt ?? journey.createdAt;
+      const completed = shippedAt(journey) ?? journey.createdAt;
       return minutes === null ? null : { label: journey.releaseTag ?? `#${journey.issueIid}`, minutes, completed };
     })
     .filter((point): point is { label: string; minutes: number; completed: string } => point !== null)

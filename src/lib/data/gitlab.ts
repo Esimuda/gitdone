@@ -133,10 +133,25 @@ export function reconcileMergedRelease(
   release: GitlabRelease | undefined,
 ): StageRecord[] {
   if (!mr || mr.state !== "merged" || !release) return stages;
-  if (stageById(stages, "approval")?.status !== "passed") return stages;
   if (stageById(stages, "rollback")) return stages;
   const releasedAt = release.released_at ?? release.created_at ?? mr.merged_at ?? undefined;
-  return stages.map((stage) => {
+  let current = stages;
+  if (stageById(current, "approval")?.status !== "passed") {
+    // The merge happened in GitLab even if journey:record has not written its note yet.
+    const approval: StageRecord = {
+      ...emptyStage("approval", "passed"),
+      startedAt: mr.merged_at ?? undefined,
+      completedAt: mr.merged_at ?? undefined,
+      summary: `MR !${mr.iid} was merged.`,
+      artifacts: [{ label: `MR !${mr.iid}`, href: mr.web_url }],
+    };
+    current = normalizeStages([...current.filter((stage) => stage.stage !== "approval"), approval]);
+  }
+  return current.map((stage) => {
+    if (stage.stage === "release" && stage.status === "passed") {
+      // Lead time ends when the GitLab Release was published, not when the merge was recorded.
+      return releasedAt ? { ...stage, completedAt: releasedAt } : stage;
+    }
     if (stage.status === "passed") return stage;
     if (stage.stage === "release") {
       return {
@@ -155,6 +170,23 @@ export function reconcileMergedRelease(
         summary: `Release ${release.tag_name} is published with the changelog from the merge request.`,
       };
     }
+    return stage;
+  });
+}
+
+/**
+ * The flow's notes do not always carry timestamps. Fill the gaps from GitLab itself:
+ * the merge request opening for Create, the merge request pipeline for Verify.
+ */
+export function fillTimestamps(
+  stages: StageRecord[],
+  mr: GitlabMergeRequest | undefined,
+  pipeline: GitlabPipeline | undefined,
+): StageRecord[] {
+  return stages.map((stage) => {
+    if (stage.status !== "passed" || stage.completedAt) return stage;
+    if (stage.stage === "create" && mr?.created_at) return { ...stage, completedAt: mr.created_at };
+    if (stage.stage === "verify" && pipeline?.updated_at) return { ...stage, completedAt: pipeline.updated_at };
     return stage;
   });
 }
@@ -183,6 +215,13 @@ export function inferJourney(input: {
     input.pipelines.find((item) => item.ref === mr?.source_branch) ??
     (mr?.state === "merged" ? input.pipelines.find((item) => item.ref === "main") : undefined);
 
+  const mrPipeline = mr
+    ? input.pipelines.find(
+        (item) =>
+          item.status === "success" && (item.ref === mr.source_branch || item.ref.includes(`merge-requests/${mr.iid}/`)),
+      )
+    : undefined;
+
   if (artifact && artifact.issueIid === input.issue.iid) {
     return {
       issueIid: input.issue.iid,
@@ -196,7 +235,7 @@ export function inferJourney(input: {
       state: input.issue.state,
       humanTouches: artifact.humanTouches,
       touchNotes: artifact.touchNotes,
-      stages: reconcileMergedRelease(artifact.stages, mr, release),
+      stages: fillTimestamps(reconcileMergedRelease(artifact.stages, mr, release), mr, mrPipeline),
       releaseTag: artifact.releaseTag ?? release?.tag_name,
       deployUrl: artifact.deployUrl,
       provenance: "artifact",
@@ -254,7 +293,7 @@ export function inferJourney(input: {
     state: input.issue.state,
     humanTouches: null,
     touchNotes: [],
-    stages,
+    stages: reconcileMergedRelease(stages, mr, release),
     releaseTag: release?.tag_name,
     provenance: "inferred",
   };

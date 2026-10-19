@@ -36,10 +36,48 @@ export function isInFlight(journey: Journey): boolean {
   );
 }
 
-export function leadTimeMinutes(journey: Journey): number | null {
+/**
+ * When a shipped journey reached production: the GitLab Release publish time, or the
+ * Cloud Run deploy time for journeys recorded without a release timestamp.
+ */
+export function shippedAt(journey: Journey): string | undefined {
+  if (!isShipped(journey)) return undefined;
+  const release = stageById(journey.stages, "release");
+  if (release?.status === "passed" && release.completedAt) return release.completedAt;
   const configure = stageById(journey.stages, "configure");
-  if (configure?.status !== "passed" || !configure.completedAt) return null;
-  return minutesBetween(journey.createdAt, configure.completedAt);
+  if (configure?.status === "passed" && configure.completedAt) return configure.completedAt;
+  return undefined;
+}
+
+/** Issue created to release published, in minutes. Null until the journey ships. */
+export function leadTimeMinutes(journey: Journey): number | null {
+  const end = shippedAt(journey);
+  if (!end) return null;
+  return minutesBetween(journey.createdAt, end);
+}
+
+export type JourneyTimes = {
+  found: string;
+  patched?: string;
+  checked?: string;
+  deployed?: string;
+  announced?: string;
+};
+
+/** Timestamps for the hero timeline. Deploy and announce fall back to the release time once shipped. */
+export function journeyTimes(journey: Journey): JourneyTimes {
+  const shipped = shippedAt(journey);
+  const create = stageById(journey.stages, "create");
+  const verify = stageById(journey.stages, "verify");
+  const configure = stageById(journey.stages, "configure");
+  const govern = stageById(journey.stages, "govern");
+  return {
+    found: journey.createdAt,
+    patched: create?.completedAt ?? create?.startedAt,
+    checked: verify?.completedAt,
+    deployed: configure?.completedAt ?? shipped,
+    announced: govern?.completedAt ?? shipped,
+  };
 }
 
 export function median(values: number[]): number | null {
@@ -132,8 +170,8 @@ export function flagshipJourney(journeys: Journey[]): Journey | undefined {
   const approved = shipped.filter((journey) => stageById(journey.stages, "approval")?.status === "passed");
   const pool = approved.length > 0 ? approved : shipped;
   return [...pool].sort((a, b) => {
-    const aTime = stageById(a.stages, "configure")?.completedAt ?? a.createdAt;
-    const bTime = stageById(b.stages, "configure")?.completedAt ?? b.createdAt;
+    const aTime = shippedAt(a) ?? a.createdAt;
+    const bTime = shippedAt(b) ?? b.createdAt;
     return bTime.localeCompare(aTime);
   })[0];
 }
