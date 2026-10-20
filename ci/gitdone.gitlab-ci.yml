@@ -49,8 +49,9 @@ stages:
   - deploy-staging
   - verify
   - deploy-production
-  - monitor
   - release
+  - configure
+  - monitor
   - govern
 
 workflow:
@@ -166,6 +167,8 @@ package:
   services:
     - name: docker:27-dind
   rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   before_script:
@@ -189,7 +192,7 @@ release:notes:
   stage: release
   image: node:22-bookworm
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE =~ /See merge request/
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE =~ /See merge request/ && $CI_PIPELINE_SOURCE != "schedule"
   needs:
     - job: package
   script:
@@ -204,7 +207,7 @@ release:publish:
   stage: release
   image: registry.gitlab.com/gitlab-org/cli:latest
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE =~ /See merge request/
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE =~ /See merge request/ && $CI_PIPELINE_SOURCE != "schedule"
   needs:
     - job: release:notes
       artifacts: true
@@ -222,12 +225,60 @@ journey:record:
   extends: .node
   stage: govern
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE =~ /See merge request/
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE =~ /See merge request/ && $CI_PIPELINE_SOURCE != "schedule"
   needs:
     - job: release:notes
       artifacts: true
     - job: release:publish
     - job: rollback-guard
       optional: true
+    - job: monitor:production
+      optional: true
   script:
     - node --experimental-strip-types scripts/record-journey.ts
+
+# Configure: after the release, point the GitLab production environment at the live
+# app, wait until Render serves this exact commit, and check every runtime setting
+# production needs is present (booleans from /api/health). Writes the configure stage.
+configure:production:
+  stage: configure
+  image: node:22-bookworm-slim
+  timeout: 30m
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE =~ /See merge request/ && $CI_PIPELINE_SOURCE != "schedule"
+  needs:
+    - job: release:publish
+  variables:
+    GITDONE_LIVE_URL: https://gitdone.onrender.com
+  environment:
+    name: production
+    url: https://gitdone.onrender.com
+    deployment_tier: production
+  script:
+    - node --experimental-strip-types scripts/post-deploy.ts configure
+
+# Monitor: probe the live endpoints over several rounds, record latency, write the
+# monitor stage, and open an incident issue on failure. A pipeline schedule runs
+# this job alone to keep watching production between releases.
+monitor:production:
+  stage: monitor
+  image: node:22-bookworm-slim
+  timeout: 15m
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE =~ /See merge request/ && $CI_PIPELINE_SOURCE != "schedule"
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $GITDONE_MONITOR == "true"
+  needs:
+    - job: configure:production
+      optional: true
+  variables:
+    GITDONE_LIVE_URL: https://gitdone.onrender.com
+  environment:
+    name: production
+    url: https://gitdone.onrender.com
+    action: verify
+  script:
+    - node --experimental-strip-types scripts/post-deploy.ts monitor
+  artifacts:
+    when: always
+    paths:
+      - monitor-report.json
