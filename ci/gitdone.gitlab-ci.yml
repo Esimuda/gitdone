@@ -226,6 +226,7 @@ journey:record:
   stage: govern
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE =~ /See merge request/ && $CI_PIPELINE_SOURCE != "schedule"
+      when: always
   needs:
     - job: release:notes
       artifacts: true
@@ -266,6 +267,7 @@ monitor:production:
   timeout: 15m
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE =~ /See merge request/ && $CI_PIPELINE_SOURCE != "schedule"
+      when: always
     - if: $CI_PIPELINE_SOURCE == "schedule"
   needs:
     - job: configure:production
