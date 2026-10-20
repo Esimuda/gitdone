@@ -10,14 +10,14 @@ export type FeedItem = { at: string; iid: number; title: string; stage: string; 
 export function MissionViz({
   leads,
   heat,
-  zeroTouch,
-  touched,
+  oneClick,
+  multiTouch,
   feed,
 }: {
   leads: LeadPoint[];
   heat: HeatCell[];
-  zeroTouch: number;
-  touched: number;
+  oneClick: number;
+  multiTouch: number;
   feed: FeedItem[];
 }) {
   const maxLead = Math.max(1, ...leads.map((point) => point.minutes));
@@ -29,9 +29,9 @@ export function MissionViz({
     return `${x},${y}`;
   });
   const maxPassed = Math.max(1, ...heat.map((cell) => cell.passed));
-  const totalShips = Math.max(1, zeroTouch + touched);
+  const totalShips = Math.max(1, oneClick + multiTouch);
   const circumference = 2 * Math.PI * 38;
-  const zeroLength = (zeroTouch / totalShips) * circumference;
+  const oneClickLength = (oneClick / totalShips) * circumference;
 
   return (
     <div className="mt-8 grid gap-3 lg:grid-cols-[1.3fr_0.7fr]">
@@ -74,9 +74,9 @@ export function MissionViz({
 
         <section className="rounded-3xl border border-border bg-card p-5 shadow-[0_24px_70px_-46px_rgba(107,79,187,0.75)]">
           <h2 className="text-sm font-medium">Human touches</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Ships the agent finished alone</p>
+          <p className="mt-1 text-xs text-muted-foreground">Ships that needed only the Merge click</p>
           <div className="mt-3 flex items-center gap-4">
-            <svg viewBox="0 0 100 100" className="size-28 shrink-0" role="img" aria-label={`${zeroTouch} of ${totalShips} ships with zero touches`}>
+            <svg viewBox="0 0 100 100" className="size-28 shrink-0" role="img" aria-label={`${oneClick} of ${totalShips} ships that needed only the Merge click`}>
               <circle cx="50" cy="50" r="38" fill="none" stroke="var(--muted)" strokeWidth="10" />
               <circle
                 cx="50"
@@ -86,21 +86,21 @@ export function MissionViz({
                 stroke="#FC6D26"
                 strokeWidth="10"
                 strokeLinecap="round"
-                strokeDasharray={`${zeroLength} ${circumference}`}
+                strokeDasharray={`${oneClickLength} ${circumference}`}
                 transform="rotate(-90 50 50)"
               />
               <text x="50" y="54" textAnchor="middle" className="fill-foreground" style={{ fontSize: 16, fontWeight: 500 }}>
-                {zeroTouch}/{totalShips}
+                {oneClick}/{totalShips}
               </text>
             </svg>
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2">
                 <span className="size-2.5 rounded-full bg-primary" />
-                {zeroTouch} zero-touch
+                {oneClick} one click
               </li>
               <li className="flex items-center gap-2">
                 <span className="size-2.5 rounded-full bg-muted" />
-                {touched} with a person
+                {multiTouch} more than one
               </li>
             </ul>
           </div>

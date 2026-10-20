@@ -6,7 +6,7 @@ import { StageRail } from "@/components/stage-rail";
 import { OVERNIGHT_HEADLINE, PRODUCT_NAME } from "@/config/brand";
 import { getAppData } from "@/lib/data";
 import { formatDuration, formatTimestamp, touchLabel } from "@/lib/format";
-import { currentStage, flagshipJourney, journeyState, leadTimeMinutes, shippedAt, spotlightJourney } from "@/lib/data/metrics";
+import { currentStage, flagshipJourney, journeyState, leadTimeMinutes, leadTimeSeries, spotlightJourney } from "@/lib/data/metrics";
 import { STAGE_LABEL } from "@/lib/data/stages";
 import type { StageRecord } from "@/lib/data/types";
 
@@ -19,14 +19,7 @@ export default async function MissionPage() {
   const spotlight = spotlightJourney(data.journeys);
   const spotlightLive = spotlight ? journeyState(spotlight) === "In flight" : false;
   const flagship = flagshipJourney(data.journeys);
-  const leads = data.journeys
-    .map((journey) => {
-      const minutes = leadTimeMinutes(journey);
-      const completed = shippedAt(journey) ?? journey.createdAt;
-      return minutes === null ? null : { label: journey.releaseTag ?? `#${journey.issueIid}`, minutes, completed };
-    })
-    .filter((point): point is { label: string; minutes: number; completed: string } => point !== null)
-    .sort((a, b) => a.completed.localeCompare(b.completed));
+  const leads = leadTimeSeries(data.journeys);
   const feed = data.journeys
     .flatMap((journey) =>
       journey.stages
@@ -86,8 +79,8 @@ export default async function MissionPage() {
       <MissionViz
         leads={leads}
         heat={tallies.map((tally) => ({ stage: tally.stage, passed: tally.passed, running: tally.running }))}
-        zeroTouch={overview.zeroTouchShips}
-        touched={Math.max(0, overview.shipsWithTouchData - overview.zeroTouchShips)}
+        oneClick={overview.oneClickShips}
+        multiTouch={Math.max(0, overview.shipsWithTouchData - overview.oneClickShips)}
         feed={feed}
       />
 
@@ -101,7 +94,7 @@ export default async function MissionPage() {
               <h2 className="mt-1 text-xl font-medium tracking-tight">{spotlight.title}</h2>
             </div>
             <Link href={`/mission/${spotlight.issueIid}`} className="text-sm text-primary hover:underline">
-              Open
+              View journey →
             </Link>
           </div>
           <StageRail stages={spotlight.stages} />

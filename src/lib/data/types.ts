@@ -114,6 +114,7 @@ export type Overview = {
   shipped: number;
   inFlight: number;
   zeroTouchShips: number;
+  oneClickShips: number;
   shipsWithTouchData: number;
   rollbacks: number;
 };
