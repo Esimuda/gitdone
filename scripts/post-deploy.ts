@@ -85,8 +85,21 @@ async function openIncident(title: string, lines: string[]): Promise<string | nu
       return existing.web_url;
     }
   }
-  const res = await gitlab(`/issues`, { method: "POST", body: JSON.stringify({ title, labels: "incident,monitor", description: lines.join("\n") }) });
+  const intro = "Opened automatically by GitDone's post-deploy checks. Production keeps serving the last good release; this issue closes itself when the check passes again.";
+  const res = await gitlab(`/issues`, { method: "POST", body: JSON.stringify({ title, labels: "incident,monitor", description: [intro, "", ...lines].join("\n") }) });
   return res.ok ? ((await res.json()) as { web_url: string }).web_url : null;
+}
+
+/** Close open incidents once the check that opened them passes again, with the evidence. */
+async function resolveIncidents(prefix: string, lines: string[]): Promise<void> {
+  const open = await gitlab(`/issues?state=opened&labels=incident&per_page=50`);
+  if (!open.ok) return;
+  for (const issue of (await open.json()) as { iid: number; title: string }[]) {
+    if (!issue.title.startsWith(prefix)) continue;
+    await gitlab(`/issues/${issue.iid}/notes`, { method: "POST", body: JSON.stringify({ body: [`Resolved automatically: the ${prefix.toLowerCase().includes("monitor") ? "monitor" : "configure"} check passed again.`, ...lines].join("\n") }) });
+    await gitlab(`/issues/${issue.iid}`, { method: "PUT", body: JSON.stringify({ state_event: "close" }) });
+    console.log(`closed incident #${issue.iid}`);
+  }
 }
 
 async function configure(): Promise<void> {
@@ -118,6 +131,7 @@ async function configure(): Promise<void> {
     details, artifacts: [{ label: "Environment", href: envUrl }, { label: "Configure job", href: jobUrl }, { label: "Live version", href: `${liveUrl}/api/version` }],
   };
   if (issueIid) await appendStage(issueIid, stage);
+  if (ok) await resolveIncidents("Configure failed", [`Configure job: ${jobUrl}`, ...details]);
   if (!ok) {
     await openIncident(`Configure failed for ${sha.slice(0, 8)}`, [`Configure job: ${jobUrl}`, ...details]);
     process.exit(1);
@@ -150,6 +164,7 @@ async function monitor(): Promise<void> {
   const report = { liveUrl, sha, at: new Date().toISOString(), ok, p50, slowest, results: results.map((r) => ({ path: r.path, status: r.status, ms: r.ms })) };
   await import("node:fs").then((fs) => fs.writeFileSync("monitor-report.json", JSON.stringify(report, null, 2)));
   let incident: string | null = null;
+  if (ok) await resolveIncidents("Production monitor failed", [`Monitor job: ${jobUrl}`, ...details]);
   if (!ok) incident = await openIncident(`Production monitor failed at ${liveUrl}`, [`Monitor job: ${jobUrl}`, ...details]);
   if (process.env.CI_PIPELINE_SOURCE !== "schedule") {
     const issueIid = await issueForCommit();
