@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Roboto, Roboto_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 import { Shell } from "@/components/shell";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -7,16 +7,22 @@ import { PRODUCT_DESCRIPTION, PRODUCT_NAME, PRODUCT_TAGLINE } from "@/config/bra
 import { getAppData } from "@/lib/data";
 import "./globals.css";
 
-const sans = Roboto({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
+// Self-hosted (latin subset from @fontsource) so builds never fetch Google Fonts.
+const sans = localFont({
+  src: [
+    { path: "./fonts/roboto-latin-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/roboto-latin-500.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/roboto-latin-700.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-roboto",
   display: "swap",
 });
 
-const mono = Roboto_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
+const mono = localFont({
+  src: [
+    { path: "./fonts/roboto-mono-latin-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/roboto-mono-latin-500.woff2", weight: "500", style: "normal" },
+  ],
   variable: "--font-roboto-mono",
   display: "swap",
 });
