@@ -46,6 +46,13 @@ export function missingConfig(health: unknown): string[] {
   return REQUIRED_CONFIG.filter((key) => config[key] !== true);
 }
 
+/** True when `newer` already contains `older` (a later merge reached production first). */
+async function contains(newer: string, older: string): Promise<boolean> {
+  const res = await gitlab(`/repository/merge_base?refs[]=${newer}&refs[]=${older}`);
+  if (!res.ok) return false;
+  return ((await res.json()) as { id?: string }).id === older;
+}
+
 async function issueForCommit(): Promise<number | null> {
   const res = await gitlab(`/repository/commits/${sha}/merge_requests`);
   if (!res.ok) return null;
@@ -106,21 +113,24 @@ async function configure(): Promise<void> {
   const startedAt = new Date().toISOString();
   const deadline = Date.now() + Number(process.env.CONFIGURE_WAIT_MINUTES || 20) * 60_000;
   let served = "";
+  let supersededBy = "";
   while (Date.now() < deadline) {
     const v = await timed("/api/version");
     try { served = (JSON.parse(v.body) as { sha?: string }).sha ?? ""; } catch { served = ""; }
     console.log(`production serves ${served || "nothing yet"} (want ${sha.slice(0, 8)})`);
     if (served === sha) break;
+    if (served && (await contains(served, sha))) { supersededBy = served; break; }
     await sleep(20_000);
   }
   const health = await timed("/api/health");
   let parsed: unknown = null;
   try { parsed = JSON.parse(health.body); } catch { /* not json */ }
   const missing = missingConfig(parsed);
-  const ok = served === sha && health.status === 200 && missing.length === 0;
+  const live = served === sha || Boolean(supersededBy);
+  const ok = live && health.status === 200 && missing.length === 0;
   const details = [
     `GitLab environment production points at ${liveUrl}.`,
-    served === sha ? `Render is serving commit ${sha.slice(0, 8)}.` : `Render still served ${served.slice(0, 8) || "nothing"} after the wait.`,
+    served === sha ? `Render is serving commit ${sha.slice(0, 8)}.` : supersededBy ? `Render is serving ${supersededBy.slice(0, 8)}, a newer main commit that already contains ${sha.slice(0, 8)}.` : `Render still served ${served.slice(0, 8) || "nothing"} after the wait.`,
     missing.length ? `Missing runtime config: ${missing.join(", ")}.` : `All ${REQUIRED_CONFIG.length} runtime settings are present: ${REQUIRED_CONFIG.join(", ")}.`,
   ];
   details.forEach((d) => console.log(d));
