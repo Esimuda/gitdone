@@ -9,6 +9,7 @@ import {
   isShipped,
   journeyTimes,
   leadTimeMinutes,
+  leadTimeSeries,
   median,
   shippedAt,
   spotlightJourney,
@@ -34,6 +35,7 @@ describe("demo overview", () => {
       shipped: 4,
       inFlight: 1,
       zeroTouchShips: 1,
+      oneClickShips: 3,
       shipsWithTouchData: 4,
       rollbacks: 1,
     });
@@ -180,5 +182,44 @@ describe("lead time from shipped journeys", () => {
     expect(times.patched).toBe("2026-10-19T08:10:00.000Z");
     expect(times.deployed).toBe("2026-10-19T08:30:00.000Z");
     expect(times.announced).toBe("2026-10-19T08:30:00.000Z");
+  });
+});
+
+describe("oneClickShips", () => {
+  it("counts shipped journeys with at most one touch and no rollback", () => {
+    const at = "2026-10-19T08:30:00.000Z";
+    const base = "2026-10-19T08:00:00.000Z";
+    const zero = { ...shippedJourney(1, base, at), humanTouches: 0 };
+    const one = shippedJourney(2, base, at);
+    const two = { ...shippedJourney(3, base, at), humanTouches: 2 };
+    const unknown = { ...shippedJourney(4, base, at), humanTouches: null };
+    const rolled = {
+      ...shippedJourney(5, base, at),
+      stages: normalizeStages([
+        ...shippedJourney(5, base, at).stages,
+        { ...emptyStage("rollback", "passed"), completedAt: at },
+      ]),
+    };
+    const open = shippedJourney(6, base, null);
+    const overview = computeOverview([zero, one, two, unknown, rolled, open]);
+    expect(overview.oneClickShips).toBe(2);
+    expect(overview.zeroTouchShips).toBe(1);
+    expect(overview.shipsWithTouchData).toBe(4);
+  });
+});
+
+describe("leadTimeSeries", () => {
+  it("orders points oldest to newest by parsed time across timestamp formats", () => {
+    const early = shippedJourney(1, "2026-10-19T08:00:00.000Z", "2026-10-19T09:00:00.000Z");
+    // Written with an offset: 2026-10-19T11:30Z, later than 10:00Z although it sorts lower as text.
+    const late = shippedJourney(2, "2026-10-19T10:00:00.000Z", "2026-10-19T13:30:00.000+02:00");
+    const middle = shippedJourney(3, "2026-10-19T08:30:00.000Z", "2026-10-19T10:00:00Z");
+    const series = leadTimeSeries([late, middle, early]);
+    expect(series.map((point) => point.label)).toEqual(["#1", "#3", "#2"]);
+    expect("2026-10-19T13:30:00.000+02:00".localeCompare("2026-10-19T10:00:00Z")).toBeGreaterThan(0);
+  });
+
+  it("skips journeys that have not shipped", () => {
+    expect(leadTimeSeries([shippedJourney(7, "2026-10-19T08:00:00.000Z", null)])).toEqual([]);
   });
 });

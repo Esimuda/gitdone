@@ -128,6 +128,9 @@ export function computeOverview(journeys: Journey[]): Overview {
   const shippedJourneys = journeys.filter(isShipped);
   const withTouchData = shippedJourneys.filter((journey) => journey.humanTouches !== null);
   const quietShips = withTouchData.filter((journey) => journey.humanTouches === 0 && !didRollback(journey));
+  const oneClick = withTouchData.filter(
+    (journey) => journey.humanTouches !== null && journey.humanTouches <= 1 && !didRollback(journey),
+  );
   return {
     leadTimeMinutes: median(leadTimes),
     leadTimeSample: leadTimes.length,
@@ -140,9 +143,36 @@ export function computeOverview(journeys: Journey[]): Overview {
     shipped: shippedJourneys.length,
     inFlight: journeys.filter(isInFlight).length,
     zeroTouchShips: quietShips.length,
+    oneClickShips: oneClick.length,
     shipsWithTouchData: withTouchData.length,
     rollbacks: journeys.filter(didRollback).length,
   };
+}
+
+export type LeadSeriesPoint = { label: string; minutes: number; completed: string };
+
+/** Lead time per shipped journey, oldest to newest by parsed time. Unparseable times go last. */
+export function leadTimeSeries(journeys: Journey[]): LeadSeriesPoint[] {
+  const points: LeadSeriesPoint[] = [];
+  for (const journey of journeys) {
+    const minutes = leadTimeMinutes(journey);
+    if (minutes === null) continue;
+    points.push({
+      label: journey.releaseTag ?? `#${journey.issueIid}`,
+      minutes,
+      completed: shippedAt(journey) ?? journey.createdAt,
+    });
+  }
+  const time = (point: LeadSeriesPoint) => {
+    const value = Date.parse(point.completed);
+    return Number.isNaN(value) ? Number.POSITIVE_INFINITY : value;
+  };
+  return points.sort((a, b) => {
+    const left = time(a);
+    const right = time(b);
+    if (left === right) return 0;
+    return left < right ? -1 : 1;
+  });
 }
 
 function runningIndex(journey: Journey): number {
